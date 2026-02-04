@@ -1,0 +1,43 @@
+export const products = [
+  // ===== GUCCI =====
+  { id: 1, brand: "Gucci", title: "Oversize Hoodie Black", category: "Верхняя одежда", size: "M", pricePerDay: 4800, image: "https://images.pexels.com/photos/6311390/pexels-photo-6311390.jpeg", tag: "Тренд" },
+  { id: 2, brand: "Gucci", title: "Modern Mini Dress", category: "Платья", size: "S", pricePerDay: 5200, image: "https://images.pexels.com/photos/1488463/pexels-photo-1488463.jpeg", tag: "Новинка" },
+  { id: 3, brand: "Gucci", title: "Wide Street Pants", category: "Костюмы", size: "L", pricePerDay: 4300, image: "https://images.pexels.com/photos/4041686/pexels-photo-4041686.jpeg", tag: "Хит" },
+
+  // ===== PRADA =====
+  { id: 4, brand: "Prada", title: "Minimal Crop Jacket", category: "Верхняя одежда", size: "M", pricePerDay: 4500, image: "https://images.pexels.com/photos/5325886/pexels-photo-5325886.jpeg", tag: "Тренд" },
+  { id: 5, brand: "Prada", title: "Monochrome Mini Dress", category: "Платья", size: "S", pricePerDay: 4900, image: "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg", tag: "Новинка" },
+  { id: 6, brand: "Prada", title: "Nylon Mini Bag", category: "Аксессуары", size: "One size", pricePerDay: 2200, image: "https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg", tag: "Хит" },
+
+  // ===== SAINT LAURENT =====
+  { id: 7, brand: "Saint Laurent", title: "Leather Jacket Dark", category: "Верхняя одежда", size: "L", pricePerDay: 5600, image: "https://images.pexels.com/photos/428338/pexels-photo-428338.jpeg", tag: "Тренд" },
+  { id: 8, brand: "Saint Laurent", title: "Black Mini Dress", category: "Платья", size: "M", pricePerDay: 5000, image: "https://images.pexels.com/photos/1936848/pexels-photo-1936848.jpeg", tag: "Новинка" },
+  { id: 9, brand: "Saint Laurent", title: "Slim Dark Suit", category: "Костюмы", size: "S", pricePerDay: 5800, image: "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg", tag: "Хит" },
+
+  // ===== BURBERRY =====
+  { id: 10, brand: "Burberry", title: "Urban Oversize Trench", category: "Верхняя одежда", size: "M", pricePerDay: 4700, image: "https://images.pexels.com/photos/3768005/pexels-photo-3768005.jpeg", tag: "Новинка" },
+  { id: 11, brand: "Burberry", title: "Modern Layered Coat", category: "Верхняя одежда", size: "L", pricePerDay: 5100, image: "https://images.pexels.com/photos/3771839/pexels-photo-3771839.jpeg", tag: "Хит" },
+
+  // ===== DIOR =====
+  { id: 12, brand: "Dior", title: "Mini Shoulder Bag", category: "Аксессуары", size: "One size", pricePerDay: 2400, image: "https://images.pexels.com/photos/2536965/pexels-photo-2536965.jpeg", tag: "Тренд" },
+  { id: 13, brand: "Dior", title: "Modern Belt Bag", category: "Аксессуары", size: "One size", pricePerDay: 2100, image: "https://images.pexels.com/photos/1488460/pexels-photo-1488460.jpeg", tag: "Новинка" },
+
+  // ===== BOTTEGA VENETA =====
+  { id: 14, brand: "Bottega Veneta", title: "Woven Clutch", category: "Аксессуары", size: "One size", pricePerDay: 2000, image: "https://images.pexels.com/photos/4041392/pexels-photo-4041392.jpeg", tag: "Хит" },
+  { id: 15, brand: "Bottega Veneta", title: "Designer Mini Bag", category: "Аксессуары", size: "One size", pricePerDay: 2300, image: "https://images.pexels.com/photos/2536962/pexels-photo-2536962.jpeg", tag: "Тренд" },
+
+  // ===== VALENTINO =====
+  { id: 16, brand: "Valentino", title: "Modern Pink Mini Dress", category: "Платья", size: "S", pricePerDay: 5400, image: "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg", tag: "Новинка" },
+  { id: 17, brand: "Valentino", title: "Street Oversize Hoodie", category: "Верхняя одежда", size: "M", pricePerDay: 4900, image: "https://images.pexels.com/photos/6311390/pexels-photo-6311390.jpeg", tag: "Тренд" },
+  { id: 18, brand: "Valentino", title: "Designer Wide Pants", category: "Костюмы", size: "L", pricePerDay: 4500, image: "https://images.pexels.com/photos/4041686/pexels-photo-4041686.jpeg", tag: "Хит" },
+
+  // ===== CHROME HEARTS =====
+  { id: 19, brand: "Chrome Hearts", title: "Leather Jacket Rock Style", category: "Верхняя одежда", size: "L", pricePerDay: 5800, image: "https://images.pexels.com/photos/428338/pexels-photo-428338.jpeg", tag: "Тренд" },
+  { id: 20, brand: "Chrome Hearts", title: "Dark Street Hoodie", category: "Верхняя одежда", size: "M", pricePerDay: 4600, image: "https://images.pexels.com/photos/5325886/pexels-photo-5325886.jpeg", tag: "Новинка" },
+  { id: 21, brand: "Chrome Hearts", title: "Edgy Designer Pants", category: "Костюмы", size: "M", pricePerDay: 4400, image: "https://images.pexels.com/photos/4041686/pexels-photo-4041686.jpeg", tag: "Хит" },
+
+  // ===== CHANEL =====
+  { id: 22, brand: "Chanel", title: "Modern Black Mini Dress", category: "Платья", size: "S", pricePerDay: 5600, image: "https://images.pexels.com/photos/1936848/pexels-photo-1936848.jpeg", tag: "Новинка" },
+  { id: 23, brand: "Chanel", title: "Minimal Tweed Jacket", category: "Верхняя одежда", size: "M", pricePerDay: 5300, image: "https://images.pexels.com/photos/3768005/pexels-photo-3768005.jpeg", tag: "Тренд" },
+  { id: 24, brand: "Chanel", title: "Classic Mini Bag Modern", category: "Аксессуары", size: "One size", pricePerDay: 2600, image: "https://images.pexels.com/photos/2536965/pexels-photo-2536965.jpeg", tag: "Хит" }
+];
