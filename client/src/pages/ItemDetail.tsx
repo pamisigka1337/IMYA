@@ -124,7 +124,7 @@ export default function ItemDetail() {
         <div className="text-center">
           <h1 className="text-2xl font-bold">Товар не найден</h1>
           <Link href="/catalog">
-            <Button variant="outline" className="mt-4">
+            <Button variant="outline" className="mt-4 rounded-xl">
               Вернуться в каталог
             </Button>
           </Link>
@@ -136,15 +136,15 @@ export default function ItemDetail() {
   const imageUrl = item.images[0] || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=800&h=1000&fit=crop";
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        <Link href="/catalog" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="mx-auto max-w-6xl px-6">
+        <Link href="/catalog" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Назад в каталог
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="relative aspect-[3/4] rounded-md overflow-hidden bg-secondary">
+          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-border/50 bg-card">
             <img
               src={imageUrl}
               alt={item.title}
@@ -159,36 +159,36 @@ export default function ItemDetail() {
 
           <div className="space-y-6">
             <div>
-              <Badge variant="secondary" className="mb-2">{item.brand}</Badge>
+              <Badge variant="secondary" className="mb-3 rounded-lg">{item.brand}</Badge>
               <h1 className="text-2xl md:text-3xl font-bold">{item.title}</h1>
-              <p className="text-muted-foreground mt-1">{item.category} • Размер {item.size}</p>
+              <p className="text-muted-foreground mt-2">{item.category} • Размер {item.size}</p>
             </div>
 
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{item.pricePerDay.toLocaleString("ru-RU")} ₽</span>
+              <span className="text-3xl font-bold text-primary">{item.pricePerDay.toLocaleString("ru-RU")} ₽</span>
               <span className="text-muted-foreground">/ день</span>
             </div>
 
             <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <Shield className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-4 w-4 text-primary" />
                 <span>Залог: {item.deposit.toLocaleString("ru-RU")} ₽</span>
               </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-green-500" />
                 <span>Состояние: {item.condition}</span>
               </div>
             </div>
 
             <p className="text-muted-foreground">{item.description}</p>
 
-            <Card>
-              <CardContent className="p-4 space-y-4">
+            <Card className="rounded-2xl border-border/50">
+              <CardContent className="p-5 space-y-4">
                 <h3 className="font-semibold">Выберите даты аренды</h3>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start flex-1" data-testid="button-start-date">
+                      <Button variant="outline" className="justify-start flex-1 rounded-xl" data-testid="button-start-date">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {startDate ? format(startDate, "d MMMM", { locale: ru }) : "Дата начала"}
                       </Button>
@@ -210,7 +210,7 @@ export default function ItemDetail() {
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start flex-1" data-testid="button-end-date">
+                      <Button variant="outline" className="justify-start flex-1 rounded-xl" data-testid="button-end-date">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {endDate ? format(endDate, "d MMMM", { locale: ru }) : "Дата окончания"}
                       </Button>
@@ -245,7 +245,7 @@ export default function ItemDetail() {
                 )}
 
                 <Button
-                  className="w-full"
+                  className="w-full rounded-xl"
                   size="lg"
                   onClick={handleBook}
                   disabled={!startDate || !endDate || createBookingMutation.isPending}

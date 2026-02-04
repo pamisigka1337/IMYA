@@ -1,0 +1,1078 @@
+# ===== IMYA: one-shot setup (Next.js App Router + Tailwind) =====
+set -e
+
+mkdir -p app/how app/catalog app/item/[id] app/checkout/[bookingId] app/account app/admin
+mkdir -p components lib
+
+# ---------- tailwind.config.ts ----------
+cat > tailwind.config.ts <<'EOF'
+import type { Config } from "tailwindcss";
+
+export default {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./lib/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        bg: "#0b0b0f",
+        card: "#14141c",
+        accent: "#7c3aed",
+        accentHover: "#9f67ff",
+        textMain: "#ffffff",
+        textSecondary: "#b3b3c2",
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+EOF
+
+# ---------- app/globals.css ----------
+cat > app/globals.css <<'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body { background: #0b0b0f; color: #ffffff; }
+EOF
+
+# ---------- components/Logo.tsx ----------
+cat > components/Logo.tsx <<'EOF'
+export function Logo() {
+  return (
+    <div className="flex items-center gap-3 select-none">
+      <div className="h-10 w-10 rounded-xl bg-accent/20 ring-1 ring-accent/40 flex items-center justify-center">
+        <span className="text-accent font-semibold text-lg">I</span>
+      </div>
+      <div className="leading-none">
+        <div className="text-xl font-semibold tracking-[0.22em]">IMYA</div>
+        <div className="text-xs text-textSecondary tracking-widest mt-1">RENTAL</div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# ---------- components/Button.tsx ----------
+cat > components/Button.tsx <<'EOF'
+import Link from "next/link";
+import { ComponentProps } from "react";
+
+type Props = ComponentProps<"button"> & { variant?: "primary" | "ghost" };
+
+export function Button({ variant = "primary", className = "", ...props }: Props) {
+  const base =
+    "inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-medium transition";
+  const styles =
+    variant === "primary"
+      ? "bg-accent text-white hover:brightness-110"
+      : "border border-white/10 text-textSecondary hover:text-textMain hover:border-white/20";
+  return <button className={`${base} ${styles} ${className}`} {...props} />;
+}
+
+export function ButtonLink({
+  href,
+  variant = "primary",
+  className = "",
+  children,
+}: {
+  href: string;
+  variant?: "primary" | "ghost";
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const base =
+    "inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-medium transition";
+  const styles =
+    variant === "primary"
+      ? "bg-accent text-white hover:brightness-110"
+      : "border border-white/10 text-textSecondary hover:text-textMain hover:border-white/20";
+  return (
+    <Link href={href} className={`${base} ${styles} ${className}`}>
+      {children}
+    </Link>
+  );
+}
+EOF
+
+# ---------- components/Header.tsx ----------
+cat > components/Header.tsx <<'EOF'
+import Link from "next/link";
+import { Logo } from "./Logo";
+
+export function Header() {
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-bg/80 backdrop-blur">
+      <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="hover:opacity-90 transition">
+          <Logo />
+        </Link>
+
+        <nav className="flex items-center gap-6 text-sm text-textSecondary">
+          <Link className="hover:text-textMain transition" href="/catalog">Каталог</Link>
+          <Link className="hover:text-textMain transition" href="/how">Как это работает</Link>
+          <Link className="hover:text-textMain transition" href="/account">Кабинет</Link>
+
+          <Link
+            href="/catalog"
+            className="ml-2 inline-flex items-center rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:brightness-110 transition"
+          >
+            В каталог
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+EOF
+
+# ---------- components/Footer.tsx ----------
+cat > components/Footer.tsx <<'EOF'
+import { pickupPoint } from "@/lib/data";
+
+export function Footer() {
+  return (
+    <footer className="border-t border-white/5 mt-16">
+      <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-textSecondary flex flex-col gap-2">
+        <div>IMYA — прокат брендовой одежды</div>
+        <div>Самовывоз: {pickupPoint.city}, {pickupPoint.address} • {pickupPoint.hours}</div>
+        <div>Тел.: {pickupPoint.phone}</div>
+      </div>
+    </footer>
+  );
+}
+EOF
+
+# ---------- components/ProductCard.tsx ----------
+cat > components/ProductCard.tsx <<'EOF'
+import Link from "next/link";
+import type { Item } from "@/lib/data";
+import { rub } from "@/lib/utils";
+
+export function ProductCard({ item }: { item: Item }) {
+  return (
+    <Link
+      href={`/item/${item.id}`}
+      className="rounded-2xl border border-white/5 bg-card p-4 hover:border-white/10 transition block"
+    >
+      <div className="aspect-[4/3] overflow-hidden rounded-xl border border-white/5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover" />
+      </div>
+
+      <div className="mt-4">
+        <div className="text-xs text-textSecondary">{item.brand}</div>
+        <div className="font-medium">{item.title}</div>
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <div className="text-textSecondary">{item.category} • {item.size}</div>
+          <div className="text-accent font-semibold">{rub(item.pricePerDay)}/день</div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+EOF
+
+# ---------- components/DateRangePicker.tsx ----------
+cat > components/DateRangePicker.tsx <<'EOF'
+"use client";
+
+export function DateRangePicker({
+  start,
+  end,
+  setStart,
+  setEnd,
+}: {
+  start: string;
+  end: string;
+  setStart: (v: string) => void;
+  setEnd: (v: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <label className="text-sm">
+        <div className="text-textSecondary mb-1">Дата начала</div>
+        <input
+          type="date"
+          value={start}
+          onChange={(e) => setStart(e.target.value)}
+          className="w-full rounded-xl bg-bg border border-white/10 px-3 py-2 outline-none focus:border-accent/60"
+        />
+      </label>
+
+      <label className="text-sm">
+        <div className="text-textSecondary mb-1">Дата конца</div>
+        <input
+          type="date"
+          value={end}
+          onChange={(e) => setEnd(e.target.value)}
+          className="w-full rounded-xl bg-bg border border-white/10 px-3 py-2 outline-none focus:border-accent/60"
+        />
+      </label>
+    </div>
+  );
+}
+EOF
+
+# ---------- lib/data.ts ----------
+cat > lib/data.ts <<'EOF'
+export type Category = "Платья" | "Костюмы" | "Верхняя одежда" | "Аксессуары";
+
+export type Item = {
+  id: string;
+  brand: string;
+  title: string;
+  category: Category;
+  size: string;
+  pricePerDay: number; // ₽
+  deposit: number;     // ₽
+  condition: "Новое" | "Отличное" | "Хорошее";
+  images: string[];
+  description: string;
+};
+
+export const pickupPoint = {
+  city: "Москва",
+  address: "ул. Примерная, 10",
+  hours: "10:00–20:00",
+  phone: "+7 (999) 000-00-00",
+};
+
+export const items: Item[] = [
+  {
+    id: "1",
+    brand: "Gucci",
+    title: "Вечернее платье",
+    category: "Платья",
+    size: "M",
+    pricePerDay: 3500,
+    deposit: 15000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya1/1200/800"],
+    description: "Минималистичный силуэт, эффектная посадка. Под мероприятия и фотосессии.",
+  },
+  {
+    id: "2",
+    brand: "Prada",
+    title: "Классический костюм",
+    category: "Костюмы",
+    size: "L",
+    pricePerDay: 4200,
+    deposit: 18000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya2/1200/800"],
+    description: "Костюм для деловых встреч и торжеств. Чёткие линии и премиальная ткань.",
+  },
+  {
+    id: "3",
+    brand: "Burberry",
+    title: "Тренч",
+    category: "Верхняя одежда",
+    size: "M",
+    pricePerDay: 2900,
+    deposit: 12000,
+    condition: "Хорошее",
+    images: ["https://picsum.photos/seed/imya3/1200/800"],
+    description: "Иконический тренч. Идеален на весну/осень.",
+  },
+  {
+    id: "4",
+    brand: "Saint Laurent",
+    title: "Клатч",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 1500,
+    deposit: 7000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya4/1200/800"],
+    description: "Лаконичный клатч под вечерние образы.",
+  },
+  {
+    id: "5",
+    brand: "Balenciaga",
+    title: "Платье-футляр",
+    category: "Платья",
+    size: "S",
+    pricePerDay: 3300,
+    deposit: 14000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya5/1200/800"],
+    description: "Чистая форма, акцент на силуэт. Под вечер и коктейль.",
+  },
+  {
+    id: "6",
+    brand: "Armani",
+    title: "Смокинг",
+    category: "Костюмы",
+    size: "M",
+    pricePerDay: 4800,
+    deposit: 20000,
+    condition: "Хорошее",
+    images: ["https://picsum.photos/seed/imya6/1200/800"],
+    description: "Смокинг для торжественных событий. В комплекте бабочка.",
+  },
+  {
+    id: "7",
+    brand: "Max Mara",
+    title: "Пальто шерстяное",
+    category: "Верхняя одежда",
+    size: "L",
+    pricePerDay: 3100,
+    deposit: 13000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya7/1200/800"],
+    description: "Тёплое и лаконичное пальто. Универсально под любой образ.",
+  },
+  {
+    id: "8",
+    brand: "Dior",
+    title: "Сумка мини",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 1700,
+    deposit: 8000,
+    condition: "Новое",
+    images: ["https://picsum.photos/seed/imya8/1200/800"],
+    description: "Компактная сумка под вечерние выходы.",
+  },
+  {
+    id: "9",
+    brand: "Versace",
+    title: "Платье с разрезом",
+    category: "Платья",
+    size: "M",
+    pricePerDay: 3900,
+    deposit: 16000,
+    condition: "Хорошее",
+    images: ["https://picsum.photos/seed/imya9/1200/800"],
+    description: "Выразительный акцент и минималистичная подача.",
+  },
+  {
+    id: "10",
+    brand: "Tom Ford",
+    title: "Костюм slim",
+    category: "Костюмы",
+    size: "S",
+    pricePerDay: 5000,
+    deposit: 22000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya10/1200/800"],
+    description: "Узкая посадка, чистая геометрия. Для важных встреч и мероприятий.",
+  },
+  {
+    id: "11",
+    brand: "Moncler",
+    title: "Пуховик",
+    category: "Верхняя одежда",
+    size: "M",
+    pricePerDay: 2700,
+    deposit: 11000,
+    condition: "Хорошее",
+    images: ["https://picsum.photos/seed/imya11/1200/800"],
+    description: "Лёгкий и тёплый. Идеален на холодный сезон.",
+  },
+  {
+    id: "12",
+    brand: "Bottega Veneta",
+    title: "Ремень кожаный",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 900,
+    deposit: 4000,
+    condition: "Отличное",
+    images: ["https://picsum.photos/seed/imya12/1200/800"],
+    description: "Лаконичный ремень, который собирает образ.",
+  },
+];
+EOF
+
+# ---------- lib/utils.ts ----------
+cat > lib/utils.ts <<'EOF'
+export function rub(n: number) {
+  return new Intl.NumberFormat("ru-RU").format(n) + " ₽";
+}
+
+export function daysBetween(startISO: string, endISO: string) {
+  const s = new Date(startISO);
+  const e = new Date(endISO);
+  const ms = e.getTime() - s.getTime();
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return Number.isFinite(days) && days > 0 ? days : 0;
+}
+
+export function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {
+  const a1 = new Date(aStart).getTime();
+  const a2 = new Date(aEnd).getTime();
+  const b1 = new Date(bStart).getTime();
+  const b2 = new Date(bEnd).getTime();
+  return a1 < b2 && b1 < a2;
+}
+EOF
+
+# ---------- lib/booking.ts ----------
+cat > lib/booking.ts <<'EOF'
+import { rangesOverlap } from "./utils";
+
+export type BookingStatus = "Draft" | "Paid" | "Active" | "Returned" | "Completed" | "Cancelled";
+
+export type Booking = {
+  id: string;
+  itemId: string;
+  itemTitle: string;
+  brand: string;
+  startDate: string; // ISO
+  endDate: string;   // ISO
+  days: number;
+  totalPrice: number; // days*price + deposit
+  deposit: number;
+  status: BookingStatus;
+  createdAt: string;
+};
+
+const KEY = "IMYA_BOOKINGS";
+
+function load(): Booking[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(KEY);
+    return raw ? (JSON.parse(raw) as Booking[]) : [];
+  } catch {
+    return [];
+  }
+}
+function save(all: Booking[]) {
+  localStorage.setItem(KEY, JSON.stringify(all));
+}
+
+export function listBookings(): Booking[] {
+  return load().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function getBooking(id: string): Booking | undefined {
+  return load().find((b) => b.id === id);
+}
+
+export function createBooking(b: Booking) {
+  const all = load();
+  const conflict = all.some(
+    (x) =>
+      x.itemId === b.itemId &&
+      x.status !== "Cancelled" &&
+      rangesOverlap(x.startDate, x.endDate, b.startDate, b.endDate)
+  );
+  if (conflict) throw new Error("Эта вещь уже занята на выбранные даты. Выберите другой период.");
+  all.push(b);
+  save(all);
+}
+
+export function updateStatus(id: string, status: Booking["status"]) {
+  const all = load();
+  const idx = all.findIndex((b) => b.id === id);
+  if (idx === -1) return;
+  all[idx] = { ...all[idx], status };
+  save(all);
+}
+EOF
+
+# ---------- app/layout.tsx ----------
+cat > app/layout.tsx <<'EOF'
+import "./globals.css";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+
+export const metadata = {
+  title: "IMYA — прокат брендовой одежды",
+  description: "МVP сервиса аренды одежды (самовывоз, симуляция оплаты).",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ru">
+      <body className="min-h-screen bg-bg text-textMain">
+        <Header />
+        {children}
+        <Footer />
+      </body>
+    </html>
+  );
+}
+EOF
+
+# ---------- app/page.tsx ----------
+cat > app/page.tsx <<'EOF'
+import { ButtonLink } from "@/components/Button";
+import { items, pickupPoint } from "@/lib/data";
+import { ProductCard } from "@/components/ProductCard";
+
+export default function Home() {
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <section className="rounded-3xl border border-white/5 bg-card p-10">
+        <p className="text-textSecondary text-sm tracking-widest">IMYA • ПРОКАТ</p>
+        <h1 className="mt-4 text-4xl font-semibold leading-tight">
+          Брендовая одежда в аренду —
+          <span className="text-accent"> минималистично</span>
+        </h1>
+        <p className="mt-4 text-textSecondary max-w-xl">
+          Выбирай вещь, бронируй по датам, оплачивай (симуляция) и забирай в пункте самовывоза.
+        </p>
+
+        <div className="mt-8 flex gap-3">
+          <ButtonLink href="/catalog" variant="primary">Перейти в каталог</ButtonLink>
+          <ButtonLink href="/how" variant="ghost">Как это работает</ButtonLink>
+        </div>
+
+        <div className="mt-10 text-sm text-textSecondary">
+          Самовывоз: {pickupPoint.city}, {pickupPoint.address} • {pickupPoint.hours}
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <div className="flex items-end justify-between">
+          <h2 className="text-xl font-semibold">Популярное</h2>
+          <a className="text-sm text-textSecondary hover:text-textMain transition" href="/catalog">Смотреть всё →</a>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {items.slice(0, 6).map((it) => (
+            <ProductCard key={it.id} item={it} />
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+EOF
+
+# ---------- app/how/page.tsx ----------
+cat > app/how/page.tsx <<'EOF'
+import { pickupPoint } from "@/lib/data";
+
+export default function How() {
+  const steps = [
+    { t: "Выбор", d: "Открой каталог, подбери бренд, размер и даты аренды." },
+    { t: "Бронь", d: "Оформи бронирование — система проверит доступность." },
+    { t: "Оплата", d: "В MVP оплата симулируется — статус меняется на Paid." },
+    { t: "Самовывоз", d: `Забери заказ: ${pickupPoint.city}, ${pickupPoint.address}.` },
+    { t: "Возврат", d: "Верни вещь в пункт самовывоза — бронь завершается." },
+  ];
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <h1 className="text-3xl font-semibold">Как это работает</h1>
+      <p className="mt-3 text-textSecondary max-w-2xl">
+        IMYA — минималистичный сервис проката брендовой одежды с самовывозом и симуляцией оплаты (для MVP/диплома).
+      </p>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+        {steps.map((s, i) => (
+          <div key={i} className="rounded-2xl border border-white/5 bg-card p-6">
+            <div className="text-xs text-textSecondary tracking-widest">ШАГ {i + 1}</div>
+            <div className="mt-2 text-lg font-medium">{s.t}</div>
+            <div className="mt-2 text-textSecondary">{s.d}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-10 rounded-2xl border border-white/5 bg-card p-6">
+        <div className="text-lg font-medium">Пункт самовывоза</div>
+        <div className="mt-2 text-textSecondary">
+          {pickupPoint.city}, {pickupPoint.address}<br />
+          Часы: {pickupPoint.hours}<br />
+          Телефон: {pickupPoint.phone}
+        </div>
+      </div>
+    </main>
+  );
+}
+EOF
+
+# ---------- app/catalog/page.tsx ----------
+cat > app/catalog/page.tsx <<'EOF'
+"use client";
+
+import { useMemo, useState } from "react";
+import { items, type Category } from "@/lib/data";
+import { ProductCard } from "@/components/ProductCard";
+
+export default function Catalog() {
+  const [q, setQ] = useState("");
+  const [category, setCategory] = useState<Category | "Все">("Все");
+  const [size, setSize] = useState<string>("Все");
+  const [sort, setSort] = useState<"Популярное" | "Дешевле" | "Дороже">("Популярное");
+
+  const categories: (Category | "Все")[] = ["Все", "Платья", "Костюмы", "Верхняя одежда", "Аксессуары"];
+  const sizes = useMemo(() => ["Все", ...Array.from(new Set(items.map(i => i.size)))], []);
+
+  const filtered = useMemo(() => {
+    let list = [...items];
+
+    const qq = q.trim().toLowerCase();
+    if (qq) {
+      list = list.filter(i => (i.brand + " " + i.title).toLowerCase().includes(qq));
+    }
+    if (category !== "Все") list = list.filter(i => i.category === category);
+    if (size !== "Все") list = list.filter(i => i.size === size);
+
+    if (sort === "Дешевле") list.sort((a, b) => a.pricePerDay - b.pricePerDay);
+    if (sort === "Дороже") list.sort((a, b) => b.pricePerDay - a.pricePerDay);
+
+    return list;
+  }, [q, category, size, sort]);
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <h1 className="text-3xl font-semibold">Каталог</h1>
+      <p className="mt-3 text-textSecondary">Фильтры, поиск и минималистичная подача (IMYA).</p>
+
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Поиск: бренд или модель…"
+          className="md:col-span-2 rounded-xl bg-bg border border-white/10 px-4 py-3 outline-none focus:border-accent/60"
+        />
+
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as any)}
+          className="rounded-xl bg-bg border border-white/10 px-4 py-3 outline-none focus:border-accent/60 text-textSecondary"
+        >
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            className="rounded-xl bg-bg border border-white/10 px-4 py-3 outline-none focus:border-accent/60 text-textSecondary"
+          >
+            {sizes.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as any)}
+            className="rounded-xl bg-bg border border-white/10 px-4 py-3 outline-none focus:border-accent/60 text-textSecondary"
+          >
+            {["Популярное", "Дешевле", "Дороже"].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filtered.map((it) => (
+          <ProductCard key={it.id} item={it} />
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="mt-8 text-textSecondary">Ничего не найдено. Попробуй изменить фильтры.</div>
+      )}
+    </main>
+  );
+}
+EOF
+
+# ---------- app/item/[id]/page.tsx ----------
+cat > app/item/[id]/page.tsx <<'EOF'
+"use client";
+
+import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { items } from "@/lib/data";
+import { rub, daysBetween } from "@/lib/utils";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import { Button } from "@/components/Button";
+import { createBooking } from "@/lib/booking";
+
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export default function ItemPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+
+  const item = useMemo(() => items.find((x) => x.id === params.id), [params.id]);
+
+  const [start, setStart] = useState<string>(todayISO());
+  const [end, setEnd] = useState<string>("");
+  const [error, setError] = useState<string>("");
+
+  if (!item) {
+    return (
+      <main className="mx-auto max-w-6xl px-6 py-14">
+        <div className="text-textSecondary">Товар не найден.</div>
+      </main>
+    );
+  }
+
+  const days = start && end ? daysBetween(start, end) : 0;
+  const rentSum = days * item.pricePerDay;
+  const total = rentSum + item.deposit;
+
+  const onBook = () => {
+    setError("");
+    if (!start || !end) return setError("Выбери даты аренды.");
+    if (days <= 0) return setError("Дата конца должна быть позже даты начала.");
+
+    const bookingId = crypto.randomUUID();
+    try {
+      createBooking({
+        id: bookingId,
+        itemId: item.id,
+        itemTitle: item.title,
+        brand: item.brand,
+        startDate: start,
+        endDate: end,
+        days,
+        totalPrice: total,
+        deposit: item.deposit,
+        status: "Draft",
+        createdAt: new Date().toISOString(),
+      });
+      router.push(`/checkout/${bookingId}`);
+    } catch (e: any) {
+      setError(e?.message || "Не удалось создать бронь.");
+    }
+  };
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="rounded-3xl border border-white/5 bg-card p-4">
+          <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-white/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover" />
+          </div>
+        </div>
+
+        <div>
+          <div className="text-textSecondary text-sm">{item.brand}</div>
+          <h1 className="mt-1 text-3xl font-semibold">{item.title}</h1>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-2xl border border-white/5 bg-card p-4">
+              <div className="text-textSecondary">Категория</div>
+              <div className="mt-1">{item.category}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-card p-4">
+              <div className="text-textSecondary">Размер</div>
+              <div className="mt-1">{item.size}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-card p-4">
+              <div className="text-textSecondary">Состояние</div>
+              <div className="mt-1">{item.condition}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-card p-4">
+              <div className="text-textSecondary">Цена</div>
+              <div className="mt-1 text-accent font-semibold">{rub(item.pricePerDay)}/день</div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-textSecondary">{item.description}</div>
+
+          <div className="mt-6 rounded-3xl border border-white/5 bg-card p-6">
+            <div className="font-medium">Выбор дат</div>
+            <div className="mt-3">
+              <DateRangePicker start={start} end={end} setStart={setStart} setEnd={setEnd} />
+            </div>
+
+            <div className="mt-4 text-sm text-textSecondary">
+              {days > 0 ? (
+                <>
+                  Дней: <span className="text-textMain font-medium">{days}</span> • Аренда:{" "}
+                  <span className="text-textMain font-medium">{rub(rentSum)}</span> • Депозит:{" "}
+                  <span className="text-textMain font-medium">{rub(item.deposit)}</span>
+                </>
+              ) : (
+                "Выбери период, чтобы увидеть расчёт."
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-lg font-semibold">
+                Итог: <span className="text-accent">{rub(total)}</span>
+              </div>
+              <Button onClick={onBook}>Забронировать</Button>
+            </div>
+
+            {error && <div className="mt-3 text-sm text-red-300">{error}</div>}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+EOF
+
+# ---------- app/checkout/[bookingId]/page.tsx ----------
+cat > app/checkout/[bookingId]/page.tsx <<'EOF'
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getBooking, updateStatus, type Booking } from "@/lib/booking";
+import { rub } from "@/lib/utils";
+import { pickupPoint } from "@/lib/data";
+import { Button, ButtonLink } from "@/components/Button";
+
+export default function CheckoutPage() {
+  const params = useParams<{ bookingId: string }>();
+  const router = useRouter();
+  const [booking, setBooking] = useState<Booking | null>(null);
+
+  useEffect(() => {
+    const b = getBooking(params.bookingId);
+    setBooking(b ?? null);
+  }, [params.bookingId]);
+
+  if (!booking) {
+    return (
+      <main className="mx-auto max-w-6xl px-6 py-14">
+        <div className="text-textSecondary">Бронь не найдена.</div>
+        <div className="mt-4">
+          <ButtonLink href="/catalog" variant="primary">В каталог</ButtonLink>
+        </div>
+      </main>
+    );
+  }
+
+  const pay = () => {
+    updateStatus(booking.id, "Paid");
+    router.push("/account");
+  };
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <h1 className="text-3xl font-semibold">Оформление</h1>
+      <p className="mt-3 text-textSecondary">Оплата симулируется — для MVP/диплома.</p>
+
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 rounded-3xl border border-white/5 bg-card p-6">
+          <div className="text-textSecondary text-sm">Товар</div>
+          <div className="mt-1 text-lg font-medium">{booking.brand} • {booking.itemTitle}</div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-2xl border border-white/5 bg-bg p-4">
+              <div className="text-textSecondary">Начало</div>
+              <div className="mt-1">{booking.startDate}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-bg p-4">
+              <div className="text-textSecondary">Конец</div>
+              <div className="mt-1">{booking.endDate}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-bg p-4">
+              <div className="text-textSecondary">Дней</div>
+              <div className="mt-1">{booking.days}</div>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-bg p-4">
+              <div className="text-textSecondary">Статус</div>
+              <div className="mt-1">{booking.status}</div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-white/5 bg-bg p-4">
+            <div className="font-medium">Самовывоз</div>
+            <div className="mt-2 text-textSecondary">
+              {pickupPoint.city}, {pickupPoint.address}<br />
+              {pickupPoint.hours}<br />
+              {pickupPoint.phone}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/5 bg-card p-6">
+          <div className="text-textSecondary text-sm">Итог</div>
+          <div className="mt-2 text-2xl font-semibold">
+            <span className="text-accent">{rub(booking.totalPrice)}</span>
+          </div>
+          <div className="mt-2 text-sm text-textSecondary">
+            Включает депозит: {rub(booking.deposit)}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3">
+            <Button onClick={pay}>Оплатить (симуляция)</Button>
+            <ButtonLink href="/account" variant="ghost">В кабинет</ButtonLink>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+EOF
+
+# ---------- app/account/page.tsx ----------
+cat > app/account/page.tsx <<'EOF'
+"use client";
+
+import { useEffect, useState } from "react";
+import { listBookings, updateStatus, type Booking } from "@/lib/booking";
+import { rub } from "@/lib/utils";
+import { Button } from "@/components/Button";
+
+function badge(status: Booking["status"]) {
+  const base = "inline-flex items-center rounded-full px-3 py-1 text-xs border";
+  if (status === "Paid") return `${base} border-accent/40 text-accent`;
+  if (status === "Cancelled") return `${base} border-white/10 text-textSecondary`;
+  if (status === "Active") return `${base} border-white/20 text-textMain`;
+  return `${base} border-white/10 text-textSecondary`;
+}
+
+export default function Account() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const refresh = () => setBookings(listBookings());
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const cancel = (id: string) => {
+    updateStatus(id, "Cancelled");
+    refresh();
+  };
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <h1 className="text-3xl font-semibold">Личный кабинет</h1>
+      <p className="mt-3 text-textSecondary">
+        Здесь хранятся бронирования (LocalStorage). Для диплома достаточно.
+      </p>
+
+      <div className="mt-8 grid gap-4">
+        {bookings.map((b) => (
+          <div key={b.id} className="rounded-3xl border border-white/5 bg-card p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="text-sm text-textSecondary">{b.brand}</div>
+                <div className="text-lg font-medium">{b.itemTitle}</div>
+                <div className="mt-2 text-sm text-textSecondary">
+                  {b.startDate} → {b.endDate} • {b.days} дней
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className={badge(b.status)}>{b.status}</span>
+                <div className="text-right">
+                  <div className="text-sm text-textSecondary">Итог</div>
+                  <div className="font-semibold text-accent">{rub(b.totalPrice)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-3">
+              {(b.status === "Draft" || b.status === "Paid") && (
+                <Button variant="ghost" onClick={() => cancel(b.id)} className="px-4 py-2">
+                  Отменить
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {bookings.length === 0 && (
+          <div className="text-textSecondary">
+            Пока нет бронирований. Перейди в каталог и выбери вещь.
+          </div>
+        )}
+      </div>
+
+      <div className="mt-10 rounded-3xl border border-white/5 bg-card p-6">
+        <div className="font-medium">Админка (демо)</div>
+        <div className="mt-2 text-textSecondary text-sm">
+          Для диплома можно показать смену статусов вручную.
+        </div>
+        <div className="mt-4">
+          <a href="/admin" className="text-accent hover:brightness-110 transition">
+            Перейти в /admin →
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
+EOF
+
+# ---------- app/admin/page.tsx ----------
+cat > app/admin/page.tsx <<'EOF'
+"use client";
+
+import { useEffect, useState } from "react";
+import { listBookings, updateStatus, type Booking, type BookingStatus } from "@/lib/booking";
+import { rub } from "@/lib/utils";
+
+const statuses: BookingStatus[] = ["Draft", "Paid", "Active", "Returned", "Completed", "Cancelled"];
+
+export default function Admin() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const refresh = () => setBookings(listBookings());
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const setStatus = (id: string, status: BookingStatus) => {
+    updateStatus(id, status);
+    refresh();
+  };
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <h1 className="text-3xl font-semibold">Админка (MVP)</h1>
+      <p className="mt-3 text-textSecondary">
+        Здесь можно менять статусы броней вручную — выглядит “как реальный сервис” на защите.
+      </p>
+
+      <div className="mt-8 grid gap-4">
+        {bookings.map((b) => (
+          <div key={b.id} className="rounded-3xl border border-white/5 bg-card p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <div className="text-sm text-textSecondary">{b.brand}</div>
+                <div className="text-lg font-medium">{b.itemTitle}</div>
+                <div className="mt-2 text-sm text-textSecondary">
+                  {b.startDate} → {b.endDate} • {b.days} дней • Итог: <span className="text-accent font-semibold">{rub(b.totalPrice)}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {statuses.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatus(b.id, s)}
+                    className={[
+                      "rounded-xl px-3 py-2 text-xs border transition",
+                      s === b.status
+                        ? "border-accent/50 text-accent bg-accent/10"
+                        : "border-white/10 text-textSecondary hover:text-textMain hover:border-white/20",
+                    ].join(" ")}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {bookings.length === 0 && (
+          <div className="text-textSecondary">Пока нет броней. Создай бронь из каталога.</div>
+        )}
+      </div>
+    </main>
+  );
+}
+EOF
+
+echo "✅ IMYA готово. Запускай: npm run dev -- --port 3000"
+# ===============================================================

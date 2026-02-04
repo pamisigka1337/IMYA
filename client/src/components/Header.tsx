@@ -1,8 +1,22 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { ShoppingBag, User, Menu, X, LogOut, Shield } from "lucide-react";
+import { User, Menu, X, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-3 select-none">
+      <div className="h-10 w-10 rounded-xl bg-primary/20 ring-1 ring-primary/40 flex items-center justify-center">
+        <span className="text-primary font-semibold text-lg">И</span>
+      </div>
+      <div className="leading-none">
+        <div className="text-xl font-semibold tracking-[0.18em]">ИМЯПРОКАТ</div>
+        <div className="text-xs text-muted-foreground tracking-widest mt-1">RENTAL</div>
+      </div>
+    </div>
+  );
+}
 
 export function Header() {
   const { user, logout, isLoading } = useAuth();
@@ -10,17 +24,16 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Главная" },
     { href: "/catalog", label: "Каталог" },
+    { href: "/account", label: "Кабинет" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-      <div className="container mx-auto px-4">
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur">
+      <div className="mx-auto max-w-6xl px-6">
         <div className="flex items-center justify-between gap-4 h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <ShoppingBag className="h-6 w-6" />
-            <span className="font-semibold text-lg tracking-tight">ПРОКАТ</span>
+          <Link href="/" className="hover:opacity-90 transition">
+            <Logo />
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -38,39 +51,39 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3">
             {isLoading ? (
-              <div className="h-9 w-20 bg-muted animate-pulse rounded-md" />
+              <div className="h-9 w-20 bg-muted animate-pulse rounded-xl" />
             ) : user ? (
               <>
                 {user.role === "admin" && (
                   <Link href="/admin">
-                    <Button variant="ghost" size="sm" data-testid="link-admin">
+                    <Button variant="ghost" size="sm" className="rounded-xl" data-testid="link-admin">
                       <Shield className="h-4 w-4 mr-1" />
                       Админ
                     </Button>
                   </Link>
                 )}
                 <Link href="/account">
-                  <Button variant="ghost" size="sm" data-testid="link-account">
+                  <Button variant="ghost" size="sm" className="rounded-xl" data-testid="link-account">
                     <User className="h-4 w-4 mr-1" />
                     {user.name}
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" onClick={logout} data-testid="button-logout">
+                <Button variant="outline" size="sm" className="rounded-xl" onClick={logout} data-testid="button-logout">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </>
             ) : (
               <>
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" data-testid="link-login">
+                  <Button variant="ghost" size="sm" className="rounded-xl" data-testid="link-login">
                     Вход
                   </Button>
                 </Link>
-                <Link href="/register">
-                  <Button size="sm" data-testid="link-register">
-                    Регистрация
+                <Link href="/catalog">
+                  <Button size="sm" className="rounded-xl" data-testid="link-catalog-cta">
+                    В каталог
                   </Button>
                 </Link>
               </>
@@ -80,7 +93,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden rounded-xl"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             data-testid="button-mobile-menu"
           >
@@ -89,13 +102,13 @@ export function Header() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t">
+          <div className="md:hidden py-4 border-t border-border/50">
             <nav className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                     location === link.href
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:bg-secondary/50"
@@ -105,27 +118,20 @@ export function Header() {
                   {link.label}
                 </Link>
               ))}
-              <div className="border-t my-2" />
+              <div className="border-t border-border/50 my-2" />
               {user ? (
                 <>
                   {user.role === "admin" && (
                     <Link
                       href="/admin"
-                      className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary/50"
+                      className="px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-secondary/50"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Админ-панель
                     </Link>
                   )}
-                  <Link
-                    href="/account"
-                    className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary/50"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Личный кабинет
-                  </Link>
                   <button
-                    className="px-3 py-2 rounded-md text-sm font-medium text-left text-muted-foreground hover:bg-secondary/50"
+                    className="px-3 py-2 rounded-xl text-sm font-medium text-left text-muted-foreground hover:bg-secondary/50"
                     onClick={() => {
                       logout();
                       setMobileMenuOpen(false);
@@ -138,14 +144,14 @@ export function Header() {
                 <>
                   <Link
                     href="/login"
-                    className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary/50"
+                    className="px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-secondary/50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Вход
                   </Link>
                   <Link
                     href="/register"
-                    className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary/50"
+                    className="px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-secondary/50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Регистрация

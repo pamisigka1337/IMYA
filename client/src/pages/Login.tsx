@@ -47,7 +47,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md rounded-2xl border-border/50">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Вход в аккаунт</CardTitle>
           <CardDescription>
@@ -67,6 +67,7 @@ export default function Login() {
                       <Input
                         type="email"
                         placeholder="email@example.com"
+                        className="rounded-xl"
                         {...field}
                         data-testid="input-email"
                       />
@@ -85,6 +86,7 @@ export default function Login() {
                       <Input
                         type="password"
                         placeholder="••••••"
+                        className="rounded-xl"
                         {...field}
                         data-testid="input-password"
                       />
@@ -93,7 +95,7 @@ export default function Login() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-submit">
+              <Button type="submit" className="w-full rounded-xl" disabled={isLoading} data-testid="button-submit">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Войти
               </Button>
@@ -101,7 +103,7 @@ export default function Login() {
           </Form>
           <p className="text-center text-sm text-muted-foreground mt-6">
             Нет аккаунта?{" "}
-            <Link href="/register" className="font-medium text-foreground hover:underline">
+            <Link href="/register" className="font-medium text-primary hover:underline">
               Зарегистрироваться
             </Link>
           </p>

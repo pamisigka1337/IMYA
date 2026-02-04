@@ -48,7 +48,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md rounded-2xl border-border/50">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Регистрация</CardTitle>
           <CardDescription>
@@ -67,6 +67,7 @@ export default function Register() {
                     <FormControl>
                       <Input
                         placeholder="Ваше имя"
+                        className="rounded-xl"
                         {...field}
                         data-testid="input-name"
                       />
@@ -85,6 +86,7 @@ export default function Register() {
                       <Input
                         type="email"
                         placeholder="email@example.com"
+                        className="rounded-xl"
                         {...field}
                         data-testid="input-email"
                       />
@@ -103,6 +105,7 @@ export default function Register() {
                       <Input
                         type="password"
                         placeholder="Минимум 6 символов"
+                        className="rounded-xl"
                         {...field}
                         data-testid="input-password"
                       />
@@ -111,7 +114,7 @@ export default function Register() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-submit">
+              <Button type="submit" className="w-full rounded-xl" disabled={isLoading} data-testid="button-submit">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Зарегистрироваться
               </Button>
@@ -119,7 +122,7 @@ export default function Register() {
           </Form>
           <p className="text-center text-sm text-muted-foreground mt-6">
             Уже есть аккаунт?{" "}
-            <Link href="/login" className="font-medium text-foreground hover:underline">
+            <Link href="/login" className="font-medium text-primary hover:underline">
               Войти
             </Link>
           </p>

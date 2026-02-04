@@ -66,7 +66,7 @@ export default function Checkout() {
           <h1 className="text-2xl font-bold">Требуется авторизация</h1>
           <p className="text-muted-foreground mt-2">Войдите в аккаунт для оформления заказа</p>
           <Link href="/login">
-            <Button className="mt-4">Войти</Button>
+            <Button className="mt-4 rounded-xl">Войти</Button>
           </Link>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function Checkout() {
         <div className="text-center">
           <h1 className="text-2xl font-bold">Бронь не найдена</h1>
           <Link href="/catalog">
-            <Button variant="outline" className="mt-4">
+            <Button variant="outline" className="mt-4 rounded-xl">
               Вернуться в каталог
             </Button>
           </Link>
@@ -113,9 +113,9 @@ export default function Checkout() {
   const isPaid = booking.status === "Paid" || booking.status === "Active" || booking.status === "Completed";
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <Link href="/catalog" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="mx-auto max-w-2xl px-6">
+        <Link href="/catalog" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Назад в каталог
         </Link>
@@ -125,9 +125,9 @@ export default function Checkout() {
         </h1>
 
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-2xl border-border/50">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center justify-between gap-2 flex-wrap">
                 <span>Детали бронирования</span>
                 <Badge variant={isPaid ? "default" : "secondary"}>
                   {booking.status === "Pending" && "Ожидает оплаты"}
@@ -140,7 +140,7 @@ export default function Checkout() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
-                <div className="w-20 h-24 rounded-md overflow-hidden bg-secondary shrink-0">
+                <div className="w-20 h-24 rounded-xl overflow-hidden border border-border/50 shrink-0">
                   <img
                     src={booking.item.images[0] || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=250&fit=crop"}
                     alt={booking.item.title}
@@ -191,24 +191,24 @@ export default function Checkout() {
           </Card>
 
           {pickupPoint && (
-            <Card>
+            <Card className="rounded-2xl border-border/50">
               <CardHeader>
                 <CardTitle className="text-lg">Пункт самовывоза</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium">{pickupPoint.city}</p>
                     <p className="text-sm text-muted-foreground">{pickupPoint.address}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <Clock className="h-5 w-5 text-primary shrink-0" />
                   <span className="text-sm">{pickupPoint.hours}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <Phone className="h-5 w-5 text-primary shrink-0" />
                   <span className="text-sm">{pickupPoint.phone}</span>
                 </div>
               </CardContent>
@@ -217,7 +217,7 @@ export default function Checkout() {
 
           {!isPaid && booking.status === "Pending" && (
             <Button
-              className="w-full"
+              className="w-full rounded-xl"
               size="lg"
               onClick={() => payMutation.mutate()}
               disabled={payMutation.isPending}

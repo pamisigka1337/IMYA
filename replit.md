@@ -1,10 +1,17 @@
-# ПРОКАТ - Branded Clothing Rental Platform
+# ИМЯПРОКАТ - Branded Clothing Rental Platform
 
 ## Overview
 
-A full-stack web application for renting branded clothing items. Users can browse a catalog of designer clothing, make bookings with date selection, and manage their rentals. The platform includes user authentication, an admin panel for inventory and booking management, and pickup point locations.
+A full-stack web application for renting branded clothing items. Users can browse a catalog of designer clothing (Gucci, Prada, Dior, Chanel, etc.), make bookings with date selection, and manage their rentals. The platform includes user authentication, an admin panel for inventory and booking management, and pickup point locations.
 
-The application is built with a React frontend and Express backend, using PostgreSQL for data persistence. It's designed as a rental marketplace with Russian language localization.
+The application is built with a React frontend and Express backend, using PostgreSQL for data persistence. It's designed as a rental marketplace with Russian language localization and a dark, modern IMYA-style design.
+
+## Recent Changes (Feb 2026)
+- Applied dark IMYA theme with purple accent color (#7c3aed / 263 70% 58%)
+- All components use rounded-xl/rounded-2xl corners for modern aesthetic
+- Added Zod validation for admin endpoints
+- Added frontend route protection (ProtectedRoute component)
+- Fixed booking status validation
 
 ## User Preferences
 
@@ -60,9 +67,16 @@ Preferred communication style: Simple, everyday language.
 
 ### UI Libraries
 - **Radix UI**: Headless UI primitives (dialog, dropdown, select, tabs, etc.)
-- **shadcn/ui**: Pre-styled component library
+- **shadcn/ui**: Pre-styled component library with custom dark theme
 - **Lucide React**: Icon library
 - **date-fns**: Date manipulation and formatting
+
+### Design System
+- **Theme**: Dark mode by default with purple primary color (#7c3aed)
+- **Background**: Very dark blue-gray (#0b0b0f equivalent)
+- **Cards**: Slightly lighter with 50% border opacity
+- **Corners**: Rounded-xl (0.75rem) for inputs/buttons, rounded-2xl (1rem) for cards
+- **Accent Color**: Purple (hsl 263 70% 58%) for interactive elements
 
 ### Authentication & Security
 - **bcryptjs**: Password hashing

@@ -76,7 +76,7 @@ export default function Account() {
           <h1 className="text-2xl font-bold">Требуется авторизация</h1>
           <p className="text-muted-foreground mt-2">Войдите в аккаунт для просмотра личного кабинета</p>
           <Link href="/login">
-            <Button className="mt-4">Войти</Button>
+            <Button className="mt-4 rounded-xl">Войти</Button>
           </Link>
         </div>
       </div>
@@ -84,11 +84,11 @@ export default function Account() {
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-3xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
-            <User className="h-6 w-6" />
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="mx-auto max-w-3xl px-6">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center ring-1 ring-primary/40">
+            <User className="h-7 w-7 text-primary" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">{user.name}</h1>
@@ -96,10 +96,10 @@ export default function Account() {
           </div>
         </div>
 
-        <Card>
+        <Card className="rounded-2xl border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+              <Package className="h-5 w-5 text-primary" />
               Мои бронирования
             </CardTitle>
           </CardHeader>
@@ -122,7 +122,7 @@ export default function Account() {
                 <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">У вас пока нет бронирований</p>
                 <Link href="/catalog">
-                  <Button variant="outline" className="mt-4">
+                  <Button variant="outline" className="mt-4 rounded-xl">
                     Перейти в каталог
                   </Button>
                 </Link>
@@ -132,7 +132,7 @@ export default function Account() {
                 {bookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className="flex gap-4 p-4 border rounded-md hover-elevate"
+                    className="flex gap-4 p-4 border border-border/50 rounded-xl hover-elevate"
                     data-testid={`booking-item-${booking.id}`}
                   >
                     <Link href={`/item/${booking.item.id}`}>

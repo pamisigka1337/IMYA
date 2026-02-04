@@ -189,12 +189,21 @@ export default function Catalog() {
   );
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold">Каталог</h1>
+          <p className="text-muted-foreground mt-2">
+            {isLoading ? "Загрузка..." : `${filteredItems.length} товаров`}
+          </p>
+        </div>
+
         <div className="flex flex-col md:flex-row gap-8">
           <aside className="hidden md:block w-64 shrink-0">
-            <h2 className="font-semibold text-lg mb-4">Фильтры</h2>
-            <FilterContent />
+            <div className="rounded-2xl border border-border/50 bg-card p-5">
+              <h2 className="font-semibold text-lg mb-4">Фильтры</h2>
+              <FilterContent />
+            </div>
           </aside>
 
           <div className="flex-1">
@@ -206,13 +215,13 @@ export default function Catalog() {
                   placeholder="Поиск по названию или бренду..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 rounded-xl bg-card border-border/50"
                   data-testid="input-search"
                 />
               </div>
               <div className="flex gap-2">
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[200px]" data-testid="select-sort">
+                  <SelectTrigger className="w-[200px] rounded-xl bg-card border-border/50" data-testid="select-sort">
                     <SelectValue placeholder="Сортировка" />
                   </SelectTrigger>
                   <SelectContent>
@@ -225,7 +234,7 @@ export default function Catalog() {
                 </Select>
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="md:hidden" data-testid="button-filters-mobile">
+                    <Button variant="outline" size="icon" className="md:hidden rounded-xl" data-testid="button-filters-mobile">
                       <SlidersHorizontal className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
@@ -241,22 +250,14 @@ export default function Catalog() {
               </div>
             </div>
 
-            <div className="mb-4 text-sm text-muted-foreground">
-              {isLoading ? (
-                <Skeleton className="h-4 w-32" />
-              ) : (
-                <span>Найдено товаров: {filteredItems.length}</span>
-              )}
-            </div>
-
             {isLoading ? (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-[3/4] rounded-md" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-5 w-full" />
-                    <Skeleton className="h-4 w-24" />
+                  <div key={i} className="rounded-2xl border border-border/50 bg-card p-4">
+                    <Skeleton className="aspect-[4/3] rounded-xl" />
+                    <Skeleton className="h-3 w-16 mt-4" />
+                    <Skeleton className="h-5 w-full mt-2" />
+                    <Skeleton className="h-4 w-32 mt-2" />
                   </div>
                 ))}
               </div>
@@ -268,9 +269,10 @@ export default function Catalog() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <p className="text-muted-foreground">Товары не найдены</p>
+                <p className="text-muted-foreground text-lg">Товары не найдены</p>
+                <p className="text-sm text-muted-foreground mt-1">Попробуйте изменить параметры поиска</p>
                 {hasFilters && (
-                  <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                  <Button variant="outline" className="mt-4 rounded-xl" onClick={clearFilters}>
                     Сбросить фильтры
                   </Button>
                 )}

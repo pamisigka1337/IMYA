@@ -195,11 +195,11 @@ export default function Admin() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Доступ запрещён</h1>
           <p className="text-muted-foreground mt-2">Эта страница доступна только администраторам</p>
           <Link href="/">
-            <Button className="mt-4">На главную</Button>
+            <Button className="mt-4 rounded-xl">На главную</Button>
           </Link>
         </div>
       </div>
@@ -207,8 +207,8 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="mx-auto max-w-6xl px-6">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl md:text-3xl font-bold">Админ-панель</h1>
         </div>
@@ -226,17 +226,17 @@ export default function Admin() {
           </TabsList>
 
           <TabsContent value="items">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <Card className="rounded-2xl border-border/50">
+              <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
                 <CardTitle>Управление товарами</CardTitle>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button onClick={openCreateDialog} data-testid="button-add-item">
+                    <Button onClick={openCreateDialog} className="rounded-xl" data-testid="button-add-item">
                       <Plus className="h-4 w-4 mr-2" />
                       Добавить товар
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl">
                     <DialogHeader>
                       <DialogTitle>{editingItem ? "Редактировать товар" : "Новый товар"}</DialogTitle>
                     </DialogHeader>
@@ -396,7 +396,7 @@ export default function Admin() {
                           control={form.control}
                           name="isActive"
                           render={({ field }) => (
-                            <FormItem className="flex items-center justify-between rounded-md border p-3">
+                            <FormItem className="flex items-center justify-between rounded-xl border border-border/50 p-3">
                               <FormLabel className="cursor-pointer">Активен</FormLabel>
                               <FormControl>
                                 <Switch
@@ -410,7 +410,7 @@ export default function Admin() {
                         />
                         <Button
                           type="submit"
-                          className="w-full"
+                          className="w-full rounded-xl"
                           disabled={createItemMutation.isPending || updateItemMutation.isPending}
                           data-testid="button-save-item"
                         >
@@ -435,10 +435,10 @@ export default function Admin() {
                     {items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-4 p-3 border rounded-md"
+                        className="flex items-center gap-4 p-3 border border-border/50 rounded-xl hover-elevate"
                         data-testid={`admin-item-${item.id}`}
                       >
-                        <div className="w-12 h-14 rounded-md overflow-hidden bg-secondary shrink-0">
+                        <div className="w-12 h-14 rounded-lg overflow-hidden border border-border/50 shrink-0">
                           <img
                             src={item.images[0] || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=100&h=120&fit=crop"}
                             alt={item.title}
@@ -446,7 +446,7 @@ export default function Admin() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium truncate">{item.title}</span>
                             {!item.isActive && <Badge variant="secondary">Неактивен</Badge>}
                           </div>
@@ -457,6 +457,7 @@ export default function Admin() {
                         <Button
                           variant="outline"
                           size="icon"
+                          className="rounded-xl"
                           onClick={() => openEditDialog(item)}
                           data-testid={`button-edit-${item.id}`}
                         >
@@ -471,7 +472,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="bookings">
-            <Card>
+            <Card className="rounded-2xl border-border/50">
               <CardHeader>
                 <CardTitle>Все бронирования</CardTitle>
               </CardHeader>
@@ -479,7 +480,7 @@ export default function Admin() {
                 {bookingsLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-20 w-full" />
+                      <Skeleton key={i} className="h-20 w-full rounded-xl" />
                     ))}
                   </div>
                 ) : !bookings || bookings.length === 0 ? (
@@ -489,11 +490,11 @@ export default function Admin() {
                     {bookings.map((booking) => (
                       <div
                         key={booking.id}
-                        className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border rounded-md"
+                        className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-border/50 rounded-xl hover-elevate"
                         data-testid={`admin-booking-${booking.id}`}
                       >
                         <div className="flex gap-3 flex-1 min-w-0">
-                          <div className="w-12 h-14 rounded-md overflow-hidden bg-secondary shrink-0">
+                          <div className="w-12 h-14 rounded-lg overflow-hidden border border-border/50 shrink-0">
                             <img
                               src={booking.item.images[0] || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=100&h=120&fit=crop"}
                               alt={booking.item.title}
@@ -505,7 +506,7 @@ export default function Admin() {
                             <p className="text-sm text-muted-foreground">
                               {booking.user?.name || "Пользователь"} • {format(parseISO(booking.startDate), "d MMM", { locale: ru })} - {format(parseISO(booking.endDate), "d MMM", { locale: ru })}
                             </p>
-                            <p className="text-sm font-medium mt-1">
+                            <p className="text-sm font-medium text-primary mt-1">
                               {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
                             </p>
                           </div>
@@ -517,7 +518,7 @@ export default function Admin() {
                               updateBookingStatusMutation.mutate({ id: booking.id, status })
                             }
                           >
-                            <SelectTrigger className="w-[160px]" data-testid={`select-status-${booking.id}`}>
+                            <SelectTrigger className="w-[160px] rounded-xl" data-testid={`select-status-${booking.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
