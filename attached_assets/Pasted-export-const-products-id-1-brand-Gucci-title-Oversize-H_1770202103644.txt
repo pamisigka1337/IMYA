@@ -1,0 +1,102 @@
+export const products = [
+  {
+    id: 1,
+    brand: "Gucci",
+    title: "Oversize Hoodie Black Edition",
+    category: "Платья",
+    size: "M",
+    pricePerDay: 4800,
+    image: "https://images.unsplash.com/photo-1520975922071-a0c6a26b1c6a",
+    tag: "Тренд"
+  },
+  {
+    id: 2,
+    brand: "Gucci",
+    title: "Modern Mini Dress Silk",
+    category: "Платья",
+    size: "S",
+    pricePerDay: 5200,
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
+    tag: "Новинка"
+  },
+  {
+    id: 3,
+    brand: "Prada",
+    title: "Minimal Crop Jacket",
+    category: "Верхняя одежда",
+    size: "M",
+    pricePerDay: 4300,
+    image: "https://images.unsplash.com/photo-1520975867597-0a6a23f7e18a",
+    tag: "Тренд"
+  },
+  {
+    id: 4,
+    brand: "Prada",
+    title: "Futuristic Mini Bag",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 2100,
+    image: "https://images.unsplash.com/photo-1585386959984-a41552231693",
+    tag: "Новинка"
+  },
+  {
+    id: 5,
+    brand: "Saint Laurent",
+    title: "Leather Jacket Rock Chic",
+    category: "Верхняя одежда",
+    size: "L",
+    pricePerDay: 5600,
+    image: "https://images.unsplash.com/photo-1520974735194-68c0e6b7b74a",
+    tag: "Хит"
+  },
+  {
+    id: 6,
+    brand: "Saint Laurent",
+    title: "Minimal Black Mini Dress",
+    category: "Платья",
+    size: "S",
+    price: 4900,
+    image: "https://images.unsplash.com/photo-1520975568475-3a8c2f6e2c5b",
+    tag: "Тренд"
+  },
+  {
+    id: 7,
+    brand: "Burberry",
+    title: "Urban Oversize Trench",
+    category: "Верхняя одежда",
+    size: "M",
+    pricePerDay: 4600,
+    image: "https://images.unsplash.com/photo-1520975918314-8b8f1d6c0d38",
+    tag: "Новинка"
+  },
+  {
+    id: 8,
+    brand: "Dior",
+    title: "Mini Shoulder Bag Modern",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 2400,
+    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3",
+    tag: "Тренд"
+  },
+  {
+    id: 9,
+    brand: "Bottega Veneta",
+    title: "Woven Clutch Minimal",
+    category: "Аксессуары",
+    size: "One size",
+    pricePerDay: 2000,
+    image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7",
+    tag: "Новинка"
+  },
+  {
+    id: 10,
+    brand: "Burberry",
+    title: "Modern Layered Coat",
+    category: "Верхняя одежда",
+    size: "L",
+    pricePerDay: 5100,
+    image: "https://images.unsplash.com/photo-1542060748-10c28b62716e",
+    tag: "Хит"
+  }
+];
