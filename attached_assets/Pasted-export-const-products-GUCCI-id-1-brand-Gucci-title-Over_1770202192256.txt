@@ -1,0 +1,28 @@
+export const products = [
+  // GUCCI
+  { id: 1, brand: "Gucci", title: "Oversize Hoodie Black", category: "Верхняя одежда", size: "M", pricePerDay: 4800, image: "https://images.unsplash.com/photo-1520975922071-a0c6a26b1c6a", tag: "Тренд" },
+  { id: 2, brand: "Gucci", title: "Modern Mini Dress", category: "Платья", size: "S", pricePerDay: 5200, image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b", tag: "Новинка" },
+  { id: 3, brand: "Gucci", title: "Wide Street Pants", category: "Костюмы", size: "L", pricePerDay: 4300, image: "https://images.unsplash.com/photo-1520975867597-0a6a23f7e18a", tag: "Хит" },
+
+  // PRADA
+  { id: 4, brand: "Prada", title: "Minimal Crop Jacket", category: "Верхняя одежда", size: "M", pricePerDay: 4500, image: "https://images.unsplash.com/photo-1520974735194-68c0e6b7b74a", tag: "Тренд" },
+  { id: 5, brand: "Prada", title: "Monochrome Mini Dress", category: "Платья", size: "S", pricePerDay: 4900, image: "https://images.unsplash.com/photo-1520975568475-3a8c2f6e2c5b", tag: "Новинка" },
+  { id: 6, brand: "Prada", title: "Nylon Mini Bag", category: "Аксессуары", size: "One size", pricePerDay: 2200, image: "https://images.unsplash.com/photo-1585386959984-a41552231693", tag: "Хит" },
+
+  // SAINT LAURENT
+  { id: 7, brand: "Saint Laurent", title: "Leather Jacket Rock", category: "Верхняя одежда", size: "L", pricePerDay: 5600, image: "https://images.unsplash.com/photo-1520974735194-68c0e6b7b74a", tag: "Тренд" },
+  { id: 8, brand: "Saint Laurent", title: "Black Minimal Dress", category: "Платья", size: "M", pricePerDay: 5000, image: "https://images.unsplash.com/photo-1520975568475-3a8c2f6e2c5b", tag: "Новинка" },
+  { id: 9, brand: "Saint Laurent", title: "Slim Dark Suit", category: "Костюмы", size: "S", pricePerDay: 5800, image: "https://images.unsplash.com/photo-1542060748-10c28b62716e", tag: "Хит" },
+
+  // BURBERRY
+  { id: 10, brand: "Burberry", title: "Urban Oversize Trench", category: "Верхняя одежда", size: "M", pricePerDay: 4700, image: "https://images.unsplash.com/photo-1520975918314-8b8f1d6c0d38", tag: "Новинка" },
+  { id: 11, brand: "Burberry", title: "Modern Layered Coat", category: "Верхняя одежда", size: "L", pricePerDay: 5100, image: "https://images.unsplash.com/photo-1542060748-10c28b62716e", tag: "Хит" },
+
+  // DIOR
+  { id: 12, brand: "Dior", title: "Mini Shoulder Bag", category: "Аксессуары", size: "One size", pricePerDay: 2400, image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3", tag: "Тренд" },
+  { id: 13, brand: "Dior", title: "Modern Belt Bag", category: "Аксессуары", size: "One size", pricePerDay: 2100, image: "https://images.unsplash.com/photo-1590874103328-eac38a683ce7", tag: "Новинка" },
+
+  // BOTTEGA VENETA
+  { id: 14, brand: "Bottega Veneta", title: "Woven Clutch Minimal", category: "Аксессуары", size: "One size", pricePerDay: 2000, image: "https://images.unsplash.com/photo-1585386959984-a41552231693", tag: "Хит" },
+  { id: 15, brand: "Bottega Veneta", title: "Designer Mini Bag", category: "Аксессуары", size: "One size", pricePerDay: 2300, image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3", tag: "Тренд" }
+];
