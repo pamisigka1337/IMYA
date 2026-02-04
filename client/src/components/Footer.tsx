@@ -12,7 +12,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/50 mt-16">
       <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-muted-foreground flex flex-col gap-2">
-        <div className="font-medium text-foreground">ИМЯПРОКАТ — прокат брендовой одежды</div>
+        <div className="font-medium text-foreground">IMYA — прокат брендовой одежды</div>
         {pickupPoint && (
           <div>Самовывоз: {pickupPoint.city}, {pickupPoint.address} • {pickupPoint.hours}</div>
         )}

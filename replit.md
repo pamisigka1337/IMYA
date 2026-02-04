@@ -1,4 +1,4 @@
-# ИМЯПРОКАТ - Branded Clothing Rental Platform
+# IMYA - Branded Clothing Rental Platform
 
 ## Overview
 

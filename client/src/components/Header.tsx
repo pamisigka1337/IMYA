@@ -3,17 +3,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { User, Menu, X, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
+import imyaLogo from "@assets/c10116e7-7113-4aac-ab5a-08b9ba69014a-md_1770198512860.jpeg";
 
 function Logo() {
   return (
-    <div className="flex items-center gap-3 select-none">
-      <div className="h-10 w-10 rounded-xl bg-primary/20 ring-1 ring-primary/40 flex items-center justify-center">
-        <span className="text-primary font-semibold text-lg">И</span>
-      </div>
-      <div className="leading-none">
-        <div className="text-xl font-semibold tracking-[0.18em]">ИМЯПРОКАТ</div>
-        <div className="text-xs text-muted-foreground tracking-widest mt-1">RENTAL</div>
-      </div>
+    <div className="flex items-center gap-2 select-none">
+      <img src={imyaLogo} alt="IMYA" className="h-10 w-auto" />
     </div>
   );
 }
