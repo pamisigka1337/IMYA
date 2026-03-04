@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IMYA — запуск проверки</title>
+    <title>IMYA — проверка dev-сервера</title>
     <style>
       body { font-family: Inter, system-ui, sans-serif; margin: 0; background:#0b1020; color:#e5e7eb; }
       .wrap { max-width: 920px; margin: 40px auto; padding: 20px; }
@@ -20,14 +20,15 @@
       <div class="card">
         <h1>Проверка IMYA</h1>
         <p>
-          Этот файл сразу открывает приложение, когда dev-сервер запущен.
-          Запуск: <code>npm run dev</code> (приложение на <code>http://localhost:5000</code>).
+          Эта страница открывает <code>http://localhost:5000/</code> (корневой route приложения),
+          чтобы не попадать на <code>Not Found</code> из-за неверного пути.
         </p>
+        <p>Сначала запусти: <code>npm run dev</code>.</p>
         <div class="row">
-          <button id="check">Проверить и открыть приложение</button>
-          <a class="btn" href="http://localhost:5000" target="_blank" rel="noreferrer">Открыть в новой вкладке</a>
+          <button id="open">Открыть приложение в iframe</button>
+          <a class="btn" href="http://localhost:5000/" target="_blank" rel="noreferrer">Открыть в новой вкладке</a>
         </div>
-        <div id="status">Статус: ожидание проверки…</div>
+        <div id="status">Статус: ожидание запуска dev-сервера…</div>
         <iframe id="appFrame" title="IMYA app" src="about:blank"></iframe>
       </div>
     </div>
@@ -35,22 +36,14 @@
     <script>
       const status = document.getElementById('status');
       const frame = document.getElementById('appFrame');
-      const APP_URL = 'http://localhost:5000';
+      const APP_URL = 'http://localhost:5000/';
 
-      async function openApp() {
-        status.textContent = 'Статус: проверяю доступность http://localhost:5000 ...';
-        try {
-          await fetch(APP_URL, { mode: 'no-cors' });
-          frame.src = APP_URL;
-          status.textContent = 'Статус: приложение открыто в iframe.';
-        } catch (e) {
-          frame.src = 'about:blank';
-          status.textContent = 'Статус: сервер недоступен. Сначала запусти npm run dev.';
-        }
+      function openApp() {
+        frame.src = APP_URL;
+        status.textContent = 'Статус: пытаюсь открыть приложение. Если видишь ошибку подключения — запусти npm run dev.';
       }
 
-      document.getElementById('check').addEventListener('click', openApp);
-      openApp();
+      document.getElementById('open').addEventListener('click', openApp);
     </script>
   </body>
 </html>
