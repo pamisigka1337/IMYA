@@ -26,7 +26,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Введите пароль"),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -49,7 +49,7 @@ export const insertItemSchema = createInsertSchema(items).omit({
   id: true,
 });
 
-export type InsertItem = z.infer<typeof insertItemSchema>;
+export type InsertItem = typeof items.$inferInsert;
 export type Item = typeof items.$inferSelect;
 
 export const bookings = pgTable("bookings", {
@@ -76,7 +76,7 @@ export const createBookingSchema = z.object({
   endDate: z.string(),
 });
 
-export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type InsertBooking = typeof bookings.$inferInsert;
 export type Booking = typeof bookings.$inferSelect;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
@@ -92,7 +92,7 @@ export const insertPickupPointSchema = createInsertSchema(pickupPoints).omit({
   id: true,
 });
 
-export type InsertPickupPoint = z.infer<typeof insertPickupPointSchema>;
+export type InsertPickupPoint = typeof pickupPoints.$inferInsert;
 export type PickupPoint = typeof pickupPoints.$inferSelect;
 
 export const BOOKING_STATUSES = ["Pending", "Paid", "Active", "Completed", "Cancelled"] as const;

@@ -16,6 +16,10 @@ declare module "express-session" {
 
 const SessionStore = MemoryStore(session);
 
+function getSingleParam(param: string | string[]): string {
+  return Array.isArray(param) ? param[0] : param;
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Требуется авторизация" });
@@ -190,7 +194,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/bookings/:id", requireAuth, async (req, res) => {
-    const booking = await storage.getBooking(req.params.id);
+    const bookingId = getSingleParam(req.params.id);
+    const booking = await storage.getBooking(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Бронь не найдена" });
     }
@@ -204,7 +209,8 @@ export async function registerRoutes(
   });
 
   app.post("/api/bookings/:id/pay", requireAuth, async (req, res) => {
-    const booking = await storage.getBooking(req.params.id);
+    const bookingId = getSingleParam(req.params.id);
+    const booking = await storage.getBooking(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Бронь не найдена" });
     }
@@ -215,12 +221,13 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Бронь уже оплачена или отменена" });
     }
 
-    const updated = await storage.updateBookingStatus(req.params.id, "Paid");
+    const updated = await storage.updateBookingStatus(bookingId, "Paid");
     res.json(updated);
   });
 
   app.post("/api/bookings/:id/cancel", requireAuth, async (req, res) => {
-    const booking = await storage.getBooking(req.params.id);
+    const bookingId = getSingleParam(req.params.id);
+    const booking = await storage.getBooking(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Бронь не найдена" });
     }
@@ -234,7 +241,7 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Нельзя отменить активную аренду" });
     }
 
-    const updated = await storage.updateBookingStatus(req.params.id, "Cancelled");
+    const updated = await storage.updateBookingStatus(bookingId, "Cancelled");
     res.json(updated);
   });
 
@@ -257,7 +264,8 @@ export async function registerRoutes(
   app.patch("/api/admin/items/:id", requireAdmin, async (req, res) => {
     try {
       const data = updateItemSchema.parse(req.body);
-      const item = await storage.updateItem(req.params.id, data);
+      const itemId = getSingleParam(req.params.id);
+      const item = await storage.updateItem(itemId, data);
       if (!item) {
         return res.status(404).json({ message: "Товар не найден" });
       }
@@ -274,9 +282,10 @@ export async function registerRoutes(
 
   app.patch("/api/admin/bookings/:id/status", requireAdmin, async (req, res) => {
     try {
+      const bookingId = getSingleParam(req.params.id);
       const { status } = req.body;
       const validatedStatus = bookingStatusSchema.parse(status);
-      const booking = await storage.updateBookingStatus(req.params.id, validatedStatus);
+      const booking = await storage.updateBookingStatus(bookingId, validatedStatus);
       if (!booking) {
         return res.status(404).json({ message: "Бронь не найдена" });
       }

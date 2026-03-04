@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IMYA — проверка dev-сервера</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; margin: 0; background:#0b1020; color:#e5e7eb; }
+      .wrap { max-width: 920px; margin: 40px auto; padding: 20px; }
+      .card { background:#111827; border:1px solid #374151; border-radius:12px; padding:20px; }
+      .row { display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; }
+      button,a.btn { background:#2563eb; color:#fff; border:0; border-radius:8px; padding:10px 14px; text-decoration:none; cursor:pointer; }
+      #status { margin-top: 12px; color:#93c5fd; }
+      iframe { width: 100%; height: 70vh; border:1px solid #374151; border-radius: 10px; margin-top: 16px; background:#fff; }
+      code { color:#bfdbfe; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Проверка IMYA</h1>
+        <p>
+          Эта страница открывает <code>http://localhost:5000/</code> (корневой route приложения),
+          чтобы не попадать на <code>Not Found</code> из-за неверного пути.
+        </p>
+        <p>Сначала запусти: <code>npm run dev</code>.</p>
+        <div class="row">
+          <button id="open">Открыть приложение в iframe</button>
+          <a class="btn" href="http://localhost:5000/" target="_blank" rel="noreferrer">Открыть в новой вкладке</a>
+        </div>
+        <div id="status">Статус: ожидание запуска dev-сервера…</div>
+        <iframe id="appFrame" title="IMYA app" src="about:blank"></iframe>
+      </div>
+    </div>
+
+    <script>
+      const status = document.getElementById('status');
+      const frame = document.getElementById('appFrame');
+      const APP_URL = 'http://localhost:5000/';
+
+      function openApp() {
+        frame.src = APP_URL;
+        status.textContent = 'Статус: пытаюсь открыть приложение. Если видишь ошибку подключения — запусти npm run dev.';
+      }
+
+      document.getElementById('open').addEventListener('click', openApp);
+    </script>
+  </body>
+</html>
