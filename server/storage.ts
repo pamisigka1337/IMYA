@@ -20,6 +20,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(id: string, data: Partial<Pick<User, "name" | "phone" | "city" | "preferredPickupPoint" | "notificationSettings">>): Promise<User | undefined>;
+  updateUserPassword(id: string, passwordHash: string): Promise<User | undefined>;
+  getProfileStats(userId: string): Promise<any>;
 
   // Items
   getItems(): Promise<Item[]>;
@@ -37,6 +40,8 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: string, status: string): Promise<Booking | undefined>;
   markBookingPaid(id: string, paymentMethod: "card" | "sbp"): Promise<Booking | undefined>;
+  cancelBooking(id: string, withRefund: boolean): Promise<Booking | undefined>;
+  completeDueRefunds(userId?: string): Promise<void>;
   hasActiveConfirmedBooking(itemId: string): Promise<boolean>;
   getAdminStats(): Promise<any>;
   checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean>;
@@ -62,6 +67,28 @@ export class DatabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const [created] = await db.insert(users).values(user).returning();
     return created;
+  }
+
+  async updateUserProfile(id: string, data: Partial<Pick<User, "name" | "phone" | "city" | "preferredPickupPoint" | "notificationSettings">>): Promise<User | undefined> {
+    const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async updateUserPassword(id: string, passwordHash: string): Promise<User | undefined> {
+    const [updated] = await db.update(users).set({ passwordHash }).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async getProfileStats(userId: string) {
+    const userBookings = await db.select().from(bookings).where(eq(bookings.userId, userId));
+    const cancelled = new Set(["rejected", "cancelled", "Cancelled"]);
+    return {
+      totalBookings: userBookings.length,
+      activeBookings: userBookings.filter((booking) => !cancelled.has(booking.status) && booking.status !== "completed" && booking.status !== "Completed").length,
+      paidBookings: userBookings.filter((booking) => booking.paymentStatus === "paid" || booking.paymentStatus === "refunded").length,
+      cancelledBookings: userBookings.filter((booking) => cancelled.has(booking.status)).length,
+      paidBookingsAmount: userBookings.filter((booking) => booking.paymentStatus === "paid" || booking.paymentStatus === "refunded").reduce((sum, booking) => sum + booking.totalPrice + booking.deposit, 0),
+    };
   }
 
   // Items
@@ -96,6 +123,7 @@ export class DatabaseStorage implements IStorage {
 
   // Bookings
   async getBookings(): Promise<(Booking & { item: Item; user: User })[]> {
+    await this.completeDueRefunds();
     const result = await db
       .select()
       .from(bookings)
@@ -111,6 +139,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBooking(id: string): Promise<(Booking & { item: Item }) | undefined> {
+    await this.completeDueRefunds();
     const [result] = await db
       .select()
       .from(bookings)
@@ -127,6 +156,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBookingsByUser(userId: string): Promise<(Booking & { item: Item })[]> {
+    await this.completeDueRefunds(userId);
     const result = await db
       .select()
       .from(bookings)
@@ -161,10 +191,39 @@ export class DatabaseStorage implements IStorage {
         paymentStatus: "paid",
         paymentMethod,
         paidAt: new Date().toISOString(),
+        refundStatus: null,
+        refundRequestedAt: null,
+        refundCompletedAt: null,
       })
       .where(eq(bookings.id, id))
       .returning();
     return updated;
+  }
+
+
+  async cancelBooking(id: string, withRefund: boolean): Promise<Booking | undefined> {
+    const now = new Date();
+    const refundCompletedAt = new Date(now.getTime() + 2 * 60 * 1000);
+    const [updated] = await db
+      .update(bookings)
+      .set(withRefund ? {
+        status: "cancelled",
+        paymentStatus: "refund_pending",
+        refundStatus: "pending",
+        refundRequestedAt: now.toISOString(),
+        refundCompletedAt: refundCompletedAt.toISOString(),
+      } : {
+        status: "cancelled",
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async completeDueRefunds(userId?: string): Promise<void> {
+    const conditions = [eq(bookings.refundStatus, "pending"), lte(bookings.refundCompletedAt, new Date().toISOString())];
+    if (userId) conditions.push(eq(bookings.userId, userId));
+    await db.update(bookings).set({ paymentStatus: "refunded", refundStatus: "refunded" }).where(and(...conditions));
   }
 
   async checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean> {

@@ -9,7 +9,13 @@ export const users = sqliteTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("user"),
+  phone: text("phone"),
+  city: text("city"),
+  preferredPickupPoint: text("preferred_pickup_point"),
+  notificationSettings: text("notification_settings", { mode: "json" }).$type<NotificationSettings>().notNull().default(sql`'{"bookingConfirmed":true,"refunds":true,"paymentStatus":true}'`),
 });
+
+export type NotificationSettings = { bookingConfirmed: boolean; refunds: boolean; paymentStatus: boolean };
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -66,6 +72,9 @@ export const bookings = sqliteTable("bookings", {
   paymentStatus: text("payment_status").notNull().default("pending"),
   paymentMethod: text("payment_method"),
   paidAt: text("paid_at"),
+  refundStatus: text("refund_status"),
+  refundRequestedAt: text("refund_requested_at"),
+  refundCompletedAt: text("refund_completed_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -74,7 +83,7 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   createdAt: true,
 });
 
-export const PAYMENT_STATUSES = ["pending", "paid", "failed"] as const;
+export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refund_pending", "refunded"] as const;
 export type PaymentStatus = typeof PAYMENT_STATUSES[number];
 export const PAYMENT_METHODS = ["card", "sbp"] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
@@ -109,7 +118,7 @@ export const ITEM_STATUSES = ["available", "booked", "unavailable"] as const;
 export type ItemStatus = typeof ITEM_STATUSES[number];
 export const itemStatusSchema = z.enum(ITEM_STATUSES);
 
-export const BOOKING_STATUSES = ["pending", "confirmed", "rejected", "completed", "Cancelled", "Pending", "Paid", "Active", "Completed"] as const;
+export const BOOKING_STATUSES = ["pending", "confirmed", "rejected", "completed", "cancelled", "Cancelled", "Pending", "Paid", "Active", "Completed"] as const;
 export type BookingStatus = typeof BOOKING_STATUSES[number];
 
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
