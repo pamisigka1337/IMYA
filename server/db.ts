@@ -77,7 +77,9 @@ export function initializeDatabase() {
     );
   `);
 
-  const itemColumns = sqlite.prepare("PRAGMA table_info(items)").all() as any[];
+  const itemColumnsStatement = sqlite.prepare("PRAGMA table_info(items)");
+  itemColumnsStatement.setReturnArrays(true);
+  const itemColumns = itemColumnsStatement.all() as unknown[][];
   if (!itemColumns.some((column) => column[1] === "status")) {
     sqlite.exec("ALTER TABLE items ADD COLUMN status TEXT NOT NULL DEFAULT 'available'");
   }
