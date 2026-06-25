@@ -26,6 +26,7 @@ export interface IStorage {
   getItem(id: string): Promise<Item | undefined>;
   createItem(item: InsertItem): Promise<Item>;
   updateItem(id: string, data: Partial<InsertItem>): Promise<Item | undefined>;
+  deleteItem(id: string): Promise<Item | undefined>;
   
   // Bookings
   getBookings(): Promise<(Booking & { item: Item; user: User })[]>;
@@ -76,6 +77,11 @@ export class DatabaseStorage implements IStorage {
   async updateItem(id: string, data: Partial<InsertItem>): Promise<Item | undefined> {
     const [updated] = await db.update(items).set(data).where(eq(items.id, id)).returning();
     return updated;
+  }
+
+  async deleteItem(id: string): Promise<Item | undefined> {
+    const [deleted] = await db.delete(items).where(eq(items.id, id)).returning();
+    return deleted;
   }
 
   // Bookings

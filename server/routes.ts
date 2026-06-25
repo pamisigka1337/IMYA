@@ -17,15 +17,15 @@ declare module "express-session" {
 
 const SessionStore = MemoryStore(session);
 
-const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function imageToDataUrl(image: UploadedImage) {
   if (!ALLOWED_IMAGE_TYPES.has(image.contentType)) {
-    throw new Error("Можно загружать только jpg, jpeg, png или webp");
+    throw new Error("Можно загружать только PNG, JPG, JPEG или WEBP");
   }
   if (image.data.length > MAX_UPLOAD_SIZE) {
-    throw new Error("Размер каждого файла не должен превышать 5 МБ");
+    throw new Error("Размер изображения не должен превышать 10 МБ");
   }
   return `data:${image.contentType};base64,${image.data.toString("base64")}`;
 }
@@ -330,6 +330,29 @@ export async function registerRoutes(
       res.json(item);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка обновления" });
+    }
+  });
+
+
+  app.delete("/api/admin/items/:id", requireAdmin, async (req, res) => {
+    try {
+      const itemId = getSingleParam(req.params.id);
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Товар не найден" });
+      }
+
+      const itemBookings = await storage.getBookingsByItem(itemId);
+      if (itemBookings.length > 0) {
+        return res.status(409).json({
+          message: "Нельзя удалить товар, у которого есть бронирования. Сначала отмените или завершите связанные бронирования.",
+        });
+      }
+
+      await storage.deleteItem(itemId);
+      res.json({ success: true, message: "Товар удалён", id: itemId });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Ошибка удаления товара" });
     }
   });
 

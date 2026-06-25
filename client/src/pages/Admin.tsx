@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Package, Users, ShoppingBag, Shield } from "lucide-react";
+import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2 } from "lucide-react";
 import type { Item, Booking, User } from "@shared/schema";
 
 type BookingWithItem = Booking & { item: Item; user: User };
@@ -43,7 +43,8 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const CATEGORIES = ["Платья", "Костюмы", "Верхняя одежда", "Аксессуары"];
 const CONDITIONS = ["Новое", "Отличное", "Хорошее"];
 const SIZES = ["XS", "S", "M", "L", "XL"];
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function parseImageInput(value?: string) {
   if (!value) return [];
@@ -103,7 +104,10 @@ export default function Admin() {
     const formData = new FormData();
     Array.from(selectedFiles).forEach((file) => {
       if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-        throw new Error("Можно загружать только jpg, jpeg, png или webp");
+        throw new Error("Можно загружать только PNG, JPG, JPEG или WEBP");
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        throw new Error("Размер изображения не должен превышать 10 МБ");
       }
       formData.append("images", file);
     });
@@ -116,7 +120,13 @@ export default function Admin() {
 
     if (!res.ok) {
       const text = (await res.text()) || res.statusText;
-      throw new Error(`${res.status}: ${text}`);
+      try {
+        const parsed = JSON.parse(text) as { message?: string };
+        throw new Error(parsed.message || text);
+      } catch (error) {
+        if (error instanceof Error && error.message !== text) throw error;
+        throw new Error(text);
+      }
     }
 
     const data = (await res.json()) as { urls: string[] };
@@ -167,6 +177,27 @@ export default function Admin() {
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
     },
   });
+
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/items/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/items"] });
+      toast({ title: "Товар удалён" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Ошибка удаления", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleDeleteItem = (item: Item) => {
+    if (!window.confirm("Вы точно хотите удалить товар?")) return;
+    deleteItemMutation.mutate(item.id);
+  };
 
   const updateBookingStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -446,7 +477,7 @@ export default function Admin() {
                             data-testid="input-image-files"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Можно добавить несколько jpg, jpeg, png или webp. Максимум 5 МБ на файл.
+                            Можно добавить несколько PNG, JPG, JPEG или WEBP. Максимум 10 МБ на файл.
                             URL-картинки выше продолжат работать, а загруженные файлы сохранятся в базе.
                           </p>
                         </div>
@@ -512,15 +543,28 @@ export default function Admin() {
                             {item.brand} • {item.category} • {item.size} • {item.pricePerDay.toLocaleString("ru-RU")} ₽/день
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="rounded-xl"
-                          onClick={() => openEditDialog(item)}
-                          data-testid={`button-edit-${item.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-xl"
+                            onClick={() => openEditDialog(item)}
+                            data-testid={`button-edit-${item.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="rounded-xl gap-2"
+                            disabled={deleteItemMutation.isPending}
+                            onClick={() => handleDeleteItem(item)}
+                            data-testid={`button-delete-${item.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Удалить
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
