@@ -100,6 +100,18 @@ export type BookingStatus = typeof BOOKING_STATUSES[number];
 
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
 
+const imageDataUrlSchema = z.string().regex(
+  /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/,
+  "Некорректный формат сохранённого изображения"
+);
+
+const imageUrlSchema = z.string().url("Некорректный URL изображения").refine(
+  (value) => value.startsWith("http://") || value.startsWith("https://"),
+  "URL изображения должен начинаться с http:// или https://"
+);
+
+export const itemImageSchema = z.union([imageDataUrlSchema, imageUrlSchema]);
+
 export const updateItemSchema = z.object({
   brand: z.string().min(1).optional(),
   title: z.string().min(1).optional(),
@@ -109,7 +121,7 @@ export const updateItemSchema = z.object({
   deposit: z.number().min(0).optional(),
   condition: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(itemImageSchema).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -122,7 +134,7 @@ export const createItemSchema = z.object({
   deposit: z.number().min(0, "Укажите залог"),
   condition: z.string().min(1, "Укажите состояние"),
   description: z.string().min(1, "Добавьте описание"),
-  images: z.array(z.string()).default([]),
+  images: z.array(itemImageSchema).default([]),
   isActive: z.boolean().default(true),
 });
 

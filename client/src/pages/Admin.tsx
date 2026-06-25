@@ -133,9 +133,43 @@ export default function Admin() {
     return data.urls;
   };
 
+  const uploadImagesToItem = async (id: string) => {
+    if (!selectedFiles || selectedFiles.length === 0) return null;
+
+    const formData = new FormData();
+    Array.from(selectedFiles).forEach((file) => {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        throw new Error("Можно загружать только PNG, JPG, JPEG или WEBP");
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        throw new Error("Размер изображения не должен превышать 10 МБ");
+      }
+      formData.append("images", file);
+    });
+
+    const res = await fetch(`/api/admin/items/${id}/images`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      try {
+        const parsed = JSON.parse(text) as { message?: string };
+        throw new Error(parsed.message || text);
+      } catch (error) {
+        if (error instanceof Error && error.message !== text) throw error;
+        throw new Error(text);
+      }
+    }
+
+    return (await res.json()) as Item;
+  };
+
   const buildItemPayload = async (data: ItemFormData) => {
     const urlImages = parseImageInput(data.images);
-    const uploadedImages = await uploadSelectedImages();
+    const uploadedImages = editingItem ? [] : await uploadSelectedImages();
     return { ...data, images: [...urlImages, ...uploadedImages] };
   };
 
@@ -162,7 +196,8 @@ export default function Admin() {
     mutationFn: async ({ id, data }: { id: string; data: ItemFormData }) => {
       const payload = await buildItemPayload(data);
       const res = await apiRequest("PATCH", `/api/admin/items/${id}`, payload);
-      return res.json();
+      const updatedItem = (await res.json()) as Item;
+      return (await uploadImagesToItem(id)) ?? updatedItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/items"] });
