@@ -57,6 +57,7 @@ export interface IStorage {
   createReview(userId: string, itemId: string, bookingId: string, rating: number, text: string): Promise<any>;
   deleteReview(id: string): Promise<void>;
   getAllReviews(): Promise<(ReviewWithUser & { item: Item })[]>;
+  getReviewEligibility(userId: string, itemId: string): Promise<{ canReview: boolean; reason?: string; bookingId?: string }>;
   canReview(userId: string, itemId: string, bookingId: string): Promise<boolean>;
   getReceiptBooking(id: string): Promise<ReceiptBooking | undefined>;
 
@@ -304,12 +305,32 @@ export class DatabaseStorage implements IStorage {
     return result.map((row) => ({ ...row.reviews, user: { id: row.users.id, name: row.users.name } }));
   }
 
+  private isReviewableBooking(booking: Booking): boolean {
+    const reviewableStatuses = new Set(["paid", "confirmed", "completed", "returned", "Paid", "Confirmed", "Completed", "Returned", "оплачено", "подтверждено", "завершено", "возвращено"]);
+    return booking.paymentStatus === "paid" || reviewableStatuses.has(booking.status);
+  }
+
+  async getReviewEligibility(userId: string, itemId: string): Promise<{ canReview: boolean; reason?: string; bookingId?: string }> {
+    const [existingReview] = await db.select().from(reviews).where(and(eq(reviews.userId, userId), eq(reviews.itemId, itemId))).limit(1);
+    if (existingReview) return { canReview: false, reason: "Вы уже оставили отзыв" };
+
+    const userBookings = await db.select().from(bookings).where(and(eq(bookings.userId, userId), eq(bookings.itemId, itemId))).orderBy(desc(bookings.createdAt));
+    const reviewableBooking = userBookings.find((booking) => this.isReviewableBooking(booking));
+    if (!reviewableBooking) return { canReview: false, reason: "Оставить отзыв можно после бронирования товара" };
+
+    return { canReview: true, bookingId: reviewableBooking.id };
+  }
+
   async canReview(userId: string, itemId: string, bookingId: string): Promise<boolean> {
+    const [existingReview] = await db.select().from(reviews).where(and(eq(reviews.userId, userId), eq(reviews.itemId, itemId))).limit(1);
+    if (existingReview) return false;
+
     const [booking] = await db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId), eq(bookings.itemId, itemId))).limit(1);
-    return !!booking && (booking.paymentStatus === "paid" || ["completed", "Completed", "Paid"].includes(booking.status));
+    return !!booking && this.isReviewableBooking(booking);
   }
 
   async createReview(userId: string, itemId: string, bookingId: string, rating: number, text: string) {
+    if (!(await this.canReview(userId, itemId, bookingId))) throw new Error("Вы уже оставили отзыв или не можете оставить отзыв на этот товар");
     const [created] = await db.insert(reviews).values({ userId, itemId, bookingId, rating, text }).returning();
     return created;
   }

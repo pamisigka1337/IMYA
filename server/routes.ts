@@ -302,11 +302,19 @@ export async function registerRoutes(
     res.json(await storage.getReviewsByItem(req.params.id));
   });
 
+  app.get("/api/items/:id/can-review", async (req, res) => {
+    if (!req.session.userId) {
+      return res.json({ canReview: false, reason: "Необходимо войти в аккаунт" });
+    }
+    const itemId = getSingleParam(req.params.id);
+    res.json(await storage.getReviewEligibility(req.session.userId, itemId));
+  });
+
   app.post("/api/items/:id/reviews", requireAuth, async (req, res) => {
     try {
       const data = createReviewSchema.parse(req.body);
       const itemId = getSingleParam(req.params.id);
-      if (!(await storage.canReview(req.session.userId!, itemId, data.bookingId))) return res.status(403).json({ message: "Отзыв можно оставить только после оплаченного или завершённого бронирования" });
+      if (!(await storage.canReview(req.session.userId!, itemId, data.bookingId))) return res.status(403).json({ message: "Отзыв можно оставить только после оплаченного, подтверждённого или завершённого бронирования" });
       const review = await storage.createReview(req.session.userId!, itemId, data.bookingId, data.rating, data.text);
       res.json(review);
     } catch (error: any) {
