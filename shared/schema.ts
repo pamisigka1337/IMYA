@@ -184,7 +184,7 @@ export const reviews = sqliteTable("reviews", {
 export const createReviewSchema = z.object({
   bookingId: z.string(),
   rating: z.number().int().min(1).max(5),
-  text: z.string().min(3, "Напишите отзыв").max(1000),
+  text: z.string().min(5, "Текст отзыва должен содержать минимум 5 символов").max(1000),
 });
 
 export type Favorite = typeof favorites.$inferSelect;
