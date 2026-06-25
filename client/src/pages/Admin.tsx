@@ -43,6 +43,17 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const CATEGORIES = ["Платья", "Костюмы", "Верхняя одежда", "Аксессуары"];
 const CONDITIONS = ["Новое", "Отличное", "Хорошее"];
 const SIZES = ["XS", "S", "M", "L", "XL"];
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function parseImageInput(value?: string) {
+  if (!value) return [];
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  const hasDataUrl = trimmed.includes("data:image/");
+  const separator = hasDataUrl ? /\n+/ : /[\n,]+/;
+  return trimmed.split(separator).map((image) => image.trim()).filter(Boolean);
+}
 
 const statusLabels: Record<string, string> = {
   Pending: "Ожидает оплаты",
@@ -90,7 +101,12 @@ export default function Admin() {
     if (!selectedFiles || selectedFiles.length === 0) return [];
 
     const formData = new FormData();
-    Array.from(selectedFiles).forEach((file) => formData.append("images", file));
+    Array.from(selectedFiles).forEach((file) => {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        throw new Error("Можно загружать только jpg, jpeg, png или webp");
+      }
+      formData.append("images", file);
+    });
 
     const res = await fetch("/api/admin/uploads", {
       method: "POST",
@@ -108,9 +124,7 @@ export default function Admin() {
   };
 
   const buildItemPayload = async (data: ItemFormData) => {
-    const urlImages = data.images
-      ? data.images.split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
+    const urlImages = parseImageInput(data.images);
     const uploadedImages = await uploadSelectedImages();
     return { ...data, images: [...urlImages, ...uploadedImages] };
   };
@@ -179,7 +193,7 @@ export default function Admin() {
       deposit: item.deposit,
       condition: item.condition,
       description: item.description,
-      images: item.images.join(", "),
+      images: item.images.join("\n"),
       isActive: item.isActive,
     });
     setSelectedFiles(null);
@@ -413,9 +427,9 @@ export default function Admin() {
                           name="images"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>URL изображений (через запятую)</FormLabel>
+                              <FormLabel>URL или сохранённые изображения (каждое с новой строки)</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="https://..." data-testid="input-images" />
+                                <Textarea {...field} placeholder="https://..." data-testid="input-images" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -433,7 +447,7 @@ export default function Admin() {
                           />
                           <p className="text-xs text-muted-foreground">
                             Можно добавить несколько jpg, jpeg, png или webp. Максимум 5 МБ на файл.
-                            URL-картинки выше продолжат работать.
+                            URL-картинки выше продолжат работать, а загруженные файлы сохранятся в базе.
                           </p>
                         </div>
                         <FormField

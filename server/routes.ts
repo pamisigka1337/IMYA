@@ -8,8 +8,6 @@ import { registerSchema, loginSchema, createBookingSchema, createItemSchema, upd
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
-import fs from "fs";
-import path from "path";
 
 declare module "express-session" {
   interface SessionData {
@@ -19,19 +17,17 @@ declare module "express-session" {
 
 const SessionStore = MemoryStore(session);
 
-const UPLOAD_DIR = path.resolve(process.cwd(), "data", "uploads");
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-function ensureUploadDir() {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-function sanitizeFilename(filename: string) {
-  const ext = path.extname(filename).toLowerCase();
-  const base = path.basename(filename, ext).replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
-  return `${base}-${Date.now()}-${crypto.randomUUID()}${ext}`;
+function imageToDataUrl(image: UploadedImage) {
+  if (!ALLOWED_IMAGE_TYPES.has(image.contentType)) {
+    throw new Error("Можно загружать только jpg, jpeg, png или webp");
+  }
+  if (image.data.length > MAX_UPLOAD_SIZE) {
+    throw new Error("Размер каждого файла не должен превышать 5 МБ");
+  }
+  return `data:${image.contentType};base64,${image.data.toString("base64")}`;
 }
 
 type UploadedImage = { filename: string; contentType: string; data: Buffer };
@@ -105,9 +101,6 @@ export async function registerRoutes(
   // Create local SQLite tables and seed test data automatically.
   initializeDatabase();
   await seed();
-
-  ensureUploadDir();
-  app.use("/uploads", (await import("express")).default.static(UPLOAD_DIR));
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
@@ -308,19 +301,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Выберите хотя бы одно изображение" });
       }
 
-      const urls: string[] = [];
-      for (const image of uploadedImages) {
-        const ext = path.extname(image.filename).toLowerCase();
-        if (!ALLOWED_IMAGE_EXTENSIONS.has(ext) || !ALLOWED_IMAGE_TYPES.has(image.contentType)) {
-          return res.status(400).json({ message: "Можно загружать только jpg, jpeg, png или webp" });
-        }
-        if (image.data.length > MAX_UPLOAD_SIZE) {
-          return res.status(400).json({ message: "Размер каждого файла не должен превышать 5 МБ" });
-        }
-        const safeName = sanitizeFilename(image.filename);
-        fs.writeFileSync(path.join(UPLOAD_DIR, safeName), image.data);
-        urls.push(`/uploads/${safeName}`);
-      }
+      const urls = uploadedImages.map(imageToDataUrl);
 
       res.json({ urls });
     } catch (error: any) {
