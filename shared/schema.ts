@@ -57,7 +57,7 @@ export const insertItemSchema = createInsertSchema(items).omit({
 });
 
 export type InsertItem = typeof items.$inferInsert;
-export type Item = typeof items.$inferSelect;
+export type Item = typeof items.$inferSelect & { averageRating?: number; reviewsCount?: number; favoritesCount?: number; isFavorite?: boolean };
 
 export const bookings = sqliteTable("bookings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -163,4 +163,33 @@ export const createItemSchema = z.object({
   status: z.enum(["available", "booked", "unavailable"]).default("available"),
 });
 
+
+export const favorites = sqliteTable("favorites", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  itemId: text("item_id").notNull().references(() => items.id),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const reviews = sqliteTable("reviews", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  itemId: text("item_id").notNull().references(() => items.id),
+  bookingId: text("booking_id").notNull().references(() => bookings.id),
+  rating: integer("rating").notNull(),
+  text: text("text").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const createReviewSchema = z.object({
+  bookingId: z.string(),
+  rating: z.number().int().min(1).max(5),
+  text: z.string().min(3, "Напишите отзыв").max(1000),
+});
+
+export type Favorite = typeof favorites.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
+export type ReviewWithUser = Review & { user: Pick<User, "id" | "name"> };
 export type BookingWithItem = Booking & { item: Item };
+export type ReceiptBooking = Booking & { item: Item; user: User };
+

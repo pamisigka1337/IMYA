@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 import { storage } from "./storage";
-import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema, paymentMethodSchema } from "@shared/schema";
+import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema, paymentMethodSchema, createReviewSchema } from "@shared/schema";
 import { calculateRentalDays, getRentalDateError } from "@shared/rental";
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
@@ -266,7 +266,8 @@ export async function registerRoutes(
     const min = minPrice ? Number(minPrice) : undefined;
     const max = maxPrice ? Number(maxPrice) : undefined;
     const allItems = await storage.getItems();
-    res.json(allItems.filter((item) => {
+    const favoriteIds = req.session.userId ? new Set((await storage.getFavorites(req.session.userId)).map((item) => item.id)) : new Set<string>();
+    res.json(allItems.map((item) => ({ ...item, isFavorite: favoriteIds.has(item.id) })).filter((item) => {
       if (!item.isActive) return false;
       if (q && !item.title.toLowerCase().includes(q)) return false;
       if (category && String(category) !== "all" && item.category !== String(category)) return false;
@@ -281,12 +282,59 @@ export async function registerRoutes(
     if (!item) {
       return res.status(404).json({ message: "Товар не найден" });
     }
+    if (req.session.userId) {
+      const favoriteIds = new Set((await storage.getFavorites(req.session.userId)).map((favorite) => favorite.id));
+      return res.json({ ...item, isFavorite: favoriteIds.has(item.id) });
+    }
     res.json(item);
   });
 
   app.get("/api/items/:id/bookings", async (req, res) => {
     const bookings = await storage.getBookingsByItem(req.params.id);
     res.json(bookings);
+  });
+
+  app.get("/api/items/:id/availability", async (req, res) => {
+    res.json(await storage.getAvailability(req.params.id));
+  });
+
+  app.get("/api/items/:id/reviews", async (req, res) => {
+    res.json(await storage.getReviewsByItem(req.params.id));
+  });
+
+  app.post("/api/items/:id/reviews", requireAuth, async (req, res) => {
+    try {
+      const data = createReviewSchema.parse(req.body);
+      const itemId = getSingleParam(req.params.id);
+      if (!(await storage.canReview(req.session.userId!, itemId, data.bookingId))) return res.status(403).json({ message: "Отзыв можно оставить только после оплаченного или завершённого бронирования" });
+      const review = await storage.createReview(req.session.userId!, itemId, data.bookingId, data.rating, data.text);
+      res.json(review);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Не удалось сохранить отзыв" });
+    }
+  });
+
+  app.get("/api/favorites", requireAuth, async (req, res) => {
+    res.json(await storage.getFavorites(req.session.userId!));
+  });
+
+  app.post("/api/favorites/:itemId", requireAuth, async (req, res) => {
+    await storage.addFavorite(req.session.userId!, getSingleParam(req.params.itemId));
+    res.json({ success: true });
+  });
+
+  app.delete("/api/favorites/:itemId", requireAuth, async (req, res) => {
+    await storage.removeFavorite(req.session.userId!, getSingleParam(req.params.itemId));
+    res.json({ success: true });
+  });
+
+  app.get("/api/receipts/:bookingId", requireAuth, async (req, res) => {
+    const booking = await storage.getReceiptBooking(getSingleParam(req.params.bookingId));
+    if (!booking) return res.status(404).json({ message: "Бронь не найдена" });
+    const viewer = await storage.getUser(req.session.userId!);
+    if (booking.userId !== req.session.userId && viewer?.role !== "admin") return res.status(403).json({ message: "Доступ запрещён" });
+    if (booking.paymentStatus !== "paid") return res.status(400).json({ message: "Квитанция доступна только после оплаты." });
+    res.json(booking);
   });
 
   // Pickup points
@@ -317,7 +365,7 @@ export async function registerRoutes(
 
       const available = await storage.checkAvailability(data.itemId, data.startDate, data.endDate);
       if (!available) {
-        return res.status(400).json({ message: "Товар недоступен в выбранные даты" });
+        return res.status(400).json({ message: "Товар уже занят на выбранные даты" });
       }
       const totalPrice = days * item.pricePerDay;
 
@@ -533,6 +581,15 @@ export async function registerRoutes(
 
   app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
     res.json(await storage.getAdminStats());
+  });
+
+  app.get("/api/admin/reviews", requireAdmin, async (_req, res) => {
+    res.json(await storage.getAllReviews());
+  });
+
+  app.delete("/api/admin/reviews/:id", requireAdmin, async (req, res) => {
+    await storage.deleteReview(getSingleParam(req.params.id));
+    res.json({ success: true });
   });
 
   app.patch("/api/admin/bookings/:id/status", requireAdmin, async (req, res) => {

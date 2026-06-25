@@ -5,6 +5,8 @@ import {
   items,
   bookings,
   pickupPoints,
+  favorites,
+  reviews,
   type User,
   type InsertUser,
   type Item,
@@ -13,6 +15,8 @@ import {
   type InsertBooking,
   type PickupPoint,
   type InsertPickupPoint,
+  type ReviewWithUser,
+  type ReceiptBooking,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -45,6 +49,16 @@ export interface IStorage {
   hasActiveConfirmedBooking(itemId: string): Promise<boolean>;
   getAdminStats(): Promise<any>;
   checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean>;
+  getAvailability(itemId: string): Promise<Booking[]>;
+  getFavorites(userId: string): Promise<Item[]>;
+  addFavorite(userId: string, itemId: string): Promise<void>;
+  removeFavorite(userId: string, itemId: string): Promise<void>;
+  getReviewsByItem(itemId: string): Promise<ReviewWithUser[]>;
+  createReview(userId: string, itemId: string, bookingId: string, rating: number, text: string): Promise<any>;
+  deleteReview(id: string): Promise<void>;
+  getAllReviews(): Promise<(ReviewWithUser & { item: Item })[]>;
+  canReview(userId: string, itemId: string, bookingId: string): Promise<boolean>;
+  getReceiptBooking(id: string): Promise<ReceiptBooking | undefined>;
 
 
   // Pickup Points
@@ -92,13 +106,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Items
+  async enrichItems(baseItems: Item[], userId?: string): Promise<Item[]> {
+    const allReviews = await db.select().from(reviews);
+    const allFavorites = await db.select().from(favorites);
+    const favSet = new Set(allFavorites.filter((f) => f.userId === userId).map((f) => f.itemId));
+    return baseItems.map((item) => {
+      const itemReviews = allReviews.filter((r) => r.itemId === item.id);
+      return {
+        ...item,
+        reviewsCount: itemReviews.length,
+        averageRating: itemReviews.length ? itemReviews.reduce((sum, r) => sum + r.rating, 0) / itemReviews.length : 0,
+        favoritesCount: allFavorites.filter((f) => f.itemId === item.id).length,
+        isFavorite: favSet.has(item.id),
+      };
+    });
+  }
+
   async getItems(): Promise<Item[]> {
-    return db.select().from(items);
+    return this.enrichItems(await db.select().from(items));
   }
 
   async getItem(id: string): Promise<Item | undefined> {
     const [item] = await db.select().from(items).where(eq(items.id, id)).limit(1);
-    return item;
+    return item ? (await this.enrichItems([item]))[0] : undefined;
   }
 
   async createItem(item: InsertItem): Promise<Item> {
@@ -229,7 +259,7 @@ export class DatabaseStorage implements IStorage {
   async checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean> {
     const conditions = [
       eq(bookings.itemId, itemId),
-      or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed"), eq(bookings.status, "Paid"), eq(bookings.status, "Active"), eq(bookings.status, "Pending")),
+      or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed"), eq(bookings.status, "Paid"), eq(bookings.status, "Active"), eq(bookings.status, "Pending"), eq(bookings.paymentStatus, "paid")),
       or(
         and(lte(bookings.startDate, startDate), gte(bookings.endDate, startDate)),
         and(lte(bookings.startDate, endDate), gte(bookings.endDate, endDate)),
@@ -247,6 +277,55 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions));
 
     return conflicts.length === 0;
+  }
+
+
+  async getAvailability(itemId: string): Promise<Booking[]> {
+    const activeStatuses = ["pending", "confirmed", "Paid", "Active", "Pending"];
+    const rows = await db.select().from(bookings).where(eq(bookings.itemId, itemId));
+    return rows.filter((booking) => activeStatuses.includes(booking.status) || booking.paymentStatus === "paid");
+  }
+
+  async getFavorites(userId: string): Promise<Item[]> {
+    const result = await db.select().from(favorites).innerJoin(items, eq(favorites.itemId, items.id)).where(eq(favorites.userId, userId)).orderBy(desc(favorites.createdAt));
+    return this.enrichItems(result.map((row) => row.items), userId);
+  }
+
+  async addFavorite(userId: string, itemId: string): Promise<void> {
+    await db.insert(favorites).values({ userId, itemId }).onConflictDoNothing();
+  }
+
+  async removeFavorite(userId: string, itemId: string): Promise<void> {
+    await db.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.itemId, itemId)));
+  }
+
+  async getReviewsByItem(itemId: string): Promise<ReviewWithUser[]> {
+    const result = await db.select().from(reviews).innerJoin(users, eq(reviews.userId, users.id)).where(eq(reviews.itemId, itemId)).orderBy(desc(reviews.createdAt));
+    return result.map((row) => ({ ...row.reviews, user: { id: row.users.id, name: row.users.name } }));
+  }
+
+  async canReview(userId: string, itemId: string, bookingId: string): Promise<boolean> {
+    const [booking] = await db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId), eq(bookings.itemId, itemId))).limit(1);
+    return !!booking && (booking.paymentStatus === "paid" || ["completed", "Completed", "Paid"].includes(booking.status));
+  }
+
+  async createReview(userId: string, itemId: string, bookingId: string, rating: number, text: string) {
+    const [created] = await db.insert(reviews).values({ userId, itemId, bookingId, rating, text }).returning();
+    return created;
+  }
+
+  async deleteReview(id: string): Promise<void> {
+    await db.delete(reviews).where(eq(reviews.id, id));
+  }
+
+  async getAllReviews(): Promise<(ReviewWithUser & { item: Item })[]> {
+    const result = await db.select().from(reviews).innerJoin(users, eq(reviews.userId, users.id)).innerJoin(items, eq(reviews.itemId, items.id)).orderBy(desc(reviews.createdAt));
+    return result.map((row) => ({ ...row.reviews, user: { id: row.users.id, name: row.users.name }, item: row.items }));
+  }
+
+  async getReceiptBooking(id: string): Promise<ReceiptBooking | undefined> {
+    const [result] = await db.select().from(bookings).innerJoin(items, eq(bookings.itemId, items.id)).innerJoin(users, eq(bookings.userId, users.id)).where(eq(bookings.id, id)).limit(1);
+    return result ? { ...result.bookings, item: result.items, user: result.users } : undefined;
   }
 
   async hasActiveConfirmedBooking(itemId: string): Promise<boolean> {
