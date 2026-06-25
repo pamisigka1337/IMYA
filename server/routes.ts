@@ -4,7 +4,7 @@ import session from "express-session";
 import bcrypt from "bcryptjs";
 import { differenceInDays, parseISO } from "date-fns";
 import { storage } from "./storage";
-import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema } from "@shared/schema";
+import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema, paymentMethodSchema } from "@shared/schema";
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
@@ -258,6 +258,8 @@ export async function registerRoutes(
         totalPrice,
         deposit: item.deposit,
         status: "pending",
+        paymentStatus: "pending",
+        paymentMethod: null,
       });
 
       res.json(booking);
@@ -286,22 +288,45 @@ export async function registerRoutes(
     res.json(booking);
   });
 
-  app.post("/api/bookings/:id/pay", requireAuth, async (req, res) => {
+  app.get("/api/bookings/:id/payment", requireAuth, async (req, res) => {
     const bookingId = getSingleParam(req.params.id);
     const booking = await storage.getBooking(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Бронь не найдена" });
     }
     if (booking.userId !== req.session.userId) {
-      return res.status(403).json({ message: "Доступ запрещён" });
+      const user = await storage.getUser(req.session.userId!);
+      if (user?.role !== "admin") {
+        return res.status(403).json({ message: "Доступ запрещён" });
+      }
     }
-    if (booking.status !== "pending" && booking.status !== "Pending") {
-      return res.status(400).json({ message: "Бронь уже оплачена или отменена" });
-    }
+    res.json(booking);
+  });
 
-    const updated = await storage.updateBookingStatus(bookingId, "confirmed");
-    await storage.updateItemStatus(booking.itemId, "booked");
-    res.json(updated);
+  app.post("/api/bookings/:id/pay", requireAuth, async (req, res) => {
+    try {
+      const bookingId = getSingleParam(req.params.id);
+      const paymentMethod = paymentMethodSchema.parse(req.body?.paymentMethod);
+      const booking = await storage.getBooking(bookingId);
+      if (!booking) {
+        return res.status(404).json({ message: "Бронь не найдена" });
+      }
+      if (booking.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Доступ запрещён" });
+      }
+      if (booking.paymentStatus === "paid") {
+        return res.status(400).json({ message: "Бронь уже оплачена" });
+      }
+      if (!["pending", "Pending"].includes(booking.status)) {
+        return res.status(400).json({ message: "Нельзя оплатить бронь с текущим статусом" });
+      }
+
+      const updated = await storage.markBookingPaid(bookingId, paymentMethod);
+      await storage.updateItemStatus(booking.itemId, "booked");
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Некорректный способ оплаты" });
+    }
   });
 
   app.post("/api/bookings/:id/cancel", requireAuth, async (req, res) => {

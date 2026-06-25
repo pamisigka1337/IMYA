@@ -63,6 +63,9 @@ export const bookings = sqliteTable("bookings", {
   totalPrice: integer("total_price").notNull(),
   deposit: integer("deposit").notNull(),
   status: text("status").notNull().default("pending"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  paymentMethod: text("payment_method"),
+  paidAt: text("paid_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -70,6 +73,12 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   id: true,
   createdAt: true,
 });
+
+export const PAYMENT_STATUSES = ["pending", "paid", "failed"] as const;
+export type PaymentStatus = typeof PAYMENT_STATUSES[number];
+export const PAYMENT_METHODS = ["card", "sbp"] as const;
+export type PaymentMethod = typeof PAYMENT_METHODS[number];
+export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
 
 export const createBookingSchema = z.object({
   itemId: z.string(),

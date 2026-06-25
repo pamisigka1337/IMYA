@@ -65,6 +65,9 @@ export function initializeDatabase() {
       total_price INTEGER NOT NULL,
       deposit INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
+      payment_status TEXT NOT NULL DEFAULT 'pending',
+      payment_method TEXT,
+      paid_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -76,6 +79,19 @@ export function initializeDatabase() {
       phone TEXT NOT NULL
     );
   `);
+
+  const bookingColumnsStatement = sqlite.prepare("PRAGMA table_info(bookings)");
+  bookingColumnsStatement.setReturnArrays(true);
+  const bookingColumns = bookingColumnsStatement.all() as unknown[][];
+  if (!bookingColumns.some((column) => column[1] === "payment_status")) {
+    sqlite.exec("ALTER TABLE bookings ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'pending'");
+  }
+  if (!bookingColumns.some((column) => column[1] === "payment_method")) {
+    sqlite.exec("ALTER TABLE bookings ADD COLUMN payment_method TEXT");
+  }
+  if (!bookingColumns.some((column) => column[1] === "paid_at")) {
+    sqlite.exec("ALTER TABLE bookings ADD COLUMN paid_at TEXT");
+  }
 
   const itemColumnsStatement = sqlite.prepare("PRAGMA table_info(items)");
   itemColumnsStatement.setReturnArrays(true);

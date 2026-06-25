@@ -36,6 +36,7 @@ export interface IStorage {
   getBookingsByItem(itemId: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: string, status: string): Promise<Booking | undefined>;
+  markBookingPaid(id: string, paymentMethod: "card" | "sbp"): Promise<Booking | undefined>;
   hasActiveConfirmedBooking(itemId: string): Promise<boolean>;
   getAdminStats(): Promise<any>;
   checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean>;
@@ -153,6 +154,19 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async markBookingPaid(id: string, paymentMethod: "card" | "sbp"): Promise<Booking | undefined> {
+    const [updated] = await db
+      .update(bookings)
+      .set({
+        paymentStatus: "paid",
+        paymentMethod,
+        paidAt: new Date().toISOString(),
+      })
+      .where(eq(bookings.id, id))
+      .returning();
+    return updated;
+  }
+
   async checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean> {
     const conditions = [
       eq(bookings.itemId, itemId),
@@ -196,6 +210,11 @@ export class DatabaseStorage implements IStorage {
       estimatedRevenue: allBookings
         .filter((booking) => ["confirmed", "completed", "Paid", "Active", "Completed"].includes(booking.status))
         .reduce((sum, booking) => sum + booking.totalPrice, 0),
+      paidBookings: allBookings.filter((booking) => booking.paymentStatus === "paid").length,
+      unpaidBookings: allBookings.filter((booking) => booking.paymentStatus !== "paid").length,
+      paidBookingsAmount: allBookings
+        .filter((booking) => booking.paymentStatus === "paid")
+        .reduce((sum, booking) => sum + booking.totalPrice + booking.deposit, 0),
     };
   }
 
