@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { User, Package, Calendar, X } from "lucide-react";
 import type { Booking, Item } from "@shared/schema";
+import { formatRussianDays } from "@shared/rental";
 
 type BookingWithItem = Booking & { item: Item };
 
@@ -178,7 +179,7 @@ export default function Account() {
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <span className="font-semibold">
-                          {booking.days} дн. • аренда {booking.totalPrice.toLocaleString("ru-RU")} ₽
+                          {booking.days} {formatRussianDays(booking.days)} • аренда {booking.totalPrice.toLocaleString("ru-RU")} ₽
                         </span>
                         <div className="flex gap-2">
                           {(booking.status === "pending" || booking.status === "Pending" || booking.status === "confirmed" || booking.status === "Paid") && (

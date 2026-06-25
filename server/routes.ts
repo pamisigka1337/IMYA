@@ -2,9 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import bcrypt from "bcryptjs";
-import { differenceInDays, parseISO } from "date-fns";
+
 import { storage } from "./storage";
 import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema, paymentMethodSchema } from "@shared/schema";
+import { calculateRentalDays, getRentalDateError } from "@shared/rental";
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
@@ -236,16 +237,15 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Товар сейчас нельзя забронировать" });
       }
 
+      const dateError = getRentalDateError(data.startDate, data.endDate);
+      if (dateError) {
+        return res.status(400).json({ message: dateError });
+      }
+      const days = calculateRentalDays(data.startDate, data.endDate);
+
       const available = await storage.checkAvailability(data.itemId, data.startDate, data.endDate);
       if (!available) {
         return res.status(400).json({ message: "Товар недоступен в выбранные даты" });
-      }
-
-      const startDate = parseISO(data.startDate);
-      const endDate = parseISO(data.endDate);
-      const days = differenceInDays(endDate, startDate) + 1;
-      if (days < 1) {
-        return res.status(400).json({ message: "Дата окончания не может быть раньше даты начала" });
       }
       const totalPrice = days * item.pricePerDay;
 
