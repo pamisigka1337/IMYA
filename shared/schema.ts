@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
@@ -31,18 +31,18 @@ export type User = typeof users.$inferSelect;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export const items = pgTable("items", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const items = sqliteTable("items", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   brand: text("brand").notNull(),
   title: text("title").notNull(),
   category: text("category").notNull(),
   size: text("size").notNull(),
   pricePerDay: integer("price_per_day").notNull(),
   deposit: integer("deposit").notNull(),
-  images: json("images").$type<string[]>().notNull().default([]),
+  images: text("images", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
   condition: text("condition").notNull(),
   description: text("description").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 });
 
 export const insertItemSchema = createInsertSchema(items).omit({
@@ -52,17 +52,17 @@ export const insertItemSchema = createInsertSchema(items).omit({
 export type InsertItem = typeof items.$inferInsert;
 export type Item = typeof items.$inferSelect;
 
-export const bookings = pgTable("bookings", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id),
-  itemId: varchar("item_id", { length: 36 }).notNull().references(() => items.id),
+export const bookings = sqliteTable("bookings", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  itemId: text("item_id").notNull().references(() => items.id),
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   days: integer("days").notNull(),
   totalPrice: integer("total_price").notNull(),
   deposit: integer("deposit").notNull(),
   status: text("status").notNull().default("Pending"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings).omit({
@@ -80,8 +80,8 @@ export type InsertBooking = typeof bookings.$inferInsert;
 export type Booking = typeof bookings.$inferSelect;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
-export const pickupPoints = pgTable("pickup_points", {
-  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+export const pickupPoints = sqliteTable("pickup_points", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   city: text("city").notNull(),
   address: text("address").notNull(),
   hours: text("hours").notNull(),

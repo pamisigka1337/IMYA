@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { differenceInDays, parseISO } from "date-fns";
 import { storage } from "./storage";
 import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema } from "@shared/schema";
+import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
 
@@ -57,7 +58,8 @@ export async function registerRoutes(
     })
   );
 
-  // Seed database
+  // Create local SQLite tables and seed test data automatically.
+  initializeDatabase();
   await seed();
 
   // Auth routes
