@@ -12,6 +12,7 @@ import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
 import ItemDetail from "@/pages/ItemDetail";
 import Checkout from "@/pages/Checkout";
+import Payment from "@/pages/Payment";
 import Account from "@/pages/Account";
 import Admin from "@/pages/Admin";
 import Login from "@/pages/Login";
@@ -26,6 +27,11 @@ function Router() {
       <Route path="/checkout/:bookingId">
         <ProtectedRoute>
           <Checkout />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/payment/:bookingId">
+        <ProtectedRoute>
+          <Payment />
         </ProtectedRoute>
       </Route>
       <Route path="/account">

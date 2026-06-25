@@ -57,9 +57,12 @@ function parseImageInput(value?: string) {
   return trimmed.split(separator).map((image) => image.trim()).filter(Boolean);
 }
 
+const paymentStatusLabels: Record<string, string> = { pending: "Ожидает оплаты", paid: "Оплачено", failed: "Ошибка оплаты" };
+const paymentMethodLabels: Record<string, string> = { card: "Карта", sbp: "СБП" };
+
 const statusLabels: Record<string, string> = { pending: "Ожидает подтверждения", confirmed: "Подтверждено", rejected: "Отклонено", completed: "Завершено", Pending: "Ожидает оплаты", Paid: "Оплачено", Active: "Активно", Completed: "Завершено", Cancelled: "Отменено" };
 const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
-type AdminStats = { totalItems: number; availableItems: number; bookedItems: number; unavailableItems: number; totalBookings: number; pendingBookings: number; confirmedBookings: number; completedBookings: number; estimatedRevenue: number };
+type AdminStats = { totalItems: number; availableItems: number; bookedItems: number; unavailableItems: number; totalBookings: number; pendingBookings: number; confirmedBookings: number; completedBookings: number; estimatedRevenue: number; paidBookings: number; unpaidBookings: number; paidBookingsAmount: number };
 
 export default function Admin() {
   const { user, isLoading: authLoading } = useAuth();
@@ -670,8 +673,14 @@ export default function Admin() {
                               {booking.user?.name || "Пользователь"} • {format(parseISO(booking.startDate), "d MMM", { locale: ru })} - {format(parseISO(booking.endDate), "d MMM", { locale: ru })}
                             </p>
                             <p className="text-sm font-medium text-primary mt-1">
-                              {booking.days} дн. • {booking.totalPrice.toLocaleString("ru-RU")} ₽
+                              {booking.days} дн. • {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
                             </p>
+                            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                              <span>Статус брони: {statusLabels[booking.status] || booking.status}</span>
+                              <span>Оплата: {paymentStatusLabels[booking.paymentStatus] || booking.paymentStatus}</span>
+                              <span>Способ: {booking.paymentMethod ? paymentMethodLabels[booking.paymentMethod] || booking.paymentMethod : "—"}</span>
+                              <span>Дата оплаты: {booking.paidAt ? format(parseISO(booking.paidAt), "d MMM yyyy, HH:mm", { locale: ru }) : "—"}</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -700,6 +709,9 @@ export default function Admin() {
                 "Подтверждённых": stats.confirmedBookings,
                 "Завершённых": stats.completedBookings,
                 "Примерный доход": `${stats.estimatedRevenue.toLocaleString("ru-RU")} ₽`,
+                "Оплаченных бронирований": stats.paidBookings,
+                "Неоплаченных бронирований": stats.unpaidBookings,
+                "Сумма оплаченных бронирований": `${stats.paidBookingsAmount.toLocaleString("ru-RU")} ₽`,
               }).map(([label, value]) => (
                 <Card key={label} className="rounded-2xl border-border/50"><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold mt-1">{value}</p></CardContent></Card>
               ))}

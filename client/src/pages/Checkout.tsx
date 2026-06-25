@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { ArrowLeft, MapPin, Clock, Phone, CheckCircle, CreditCard } from "lucide-react";
 import type { Booking, Item, PickupPoint } from "@shared/schema";
 
@@ -18,8 +17,6 @@ export default function Checkout() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
-
   const { data: booking, isLoading: bookingLoading } = useQuery<BookingWithItem>({
     queryKey: ["/api/bookings", bookingId],
     enabled: !!bookingId && !!user,
@@ -29,27 +26,7 @@ export default function Checkout() {
     queryKey: ["/api/pickup-points"],
   });
 
-  const payMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/pay`);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings", bookingId] });
-      toast({
-        title: "Оплата успешна",
-        description: "Ваша бронь оплачена. Ждём вас в пункте выдачи!",
-      });
-      setLocation("/account");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка оплаты",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const goToPayment = () => setLocation(`/payment/${bookingId}`);
 
   if (authLoading) {
     return (
@@ -218,18 +195,11 @@ export default function Checkout() {
             <Button
               className="w-full rounded-xl"
               size="lg"
-              onClick={() => payMutation.mutate()}
-              disabled={payMutation.isPending}
+              onClick={goToPayment}
               data-testid="button-pay"
             >
-              {payMutation.isPending ? (
-                "Обработка..."
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Оплатить {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
-                </>
-              )}
+              <CreditCard className="mr-2 h-4 w-4" />
+              Перейти к демо-оплате {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
             </Button>
           )}
 

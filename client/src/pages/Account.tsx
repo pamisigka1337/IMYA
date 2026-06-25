@@ -14,6 +14,8 @@ import type { Booking, Item } from "@shared/schema";
 
 type BookingWithItem = Booking & { item: Item };
 
+const paymentStatusLabels: Record<string, string> = { pending: "Ожидает оплаты", paid: "Оплачено", failed: "Ошибка оплаты" };
+
 const statusLabels: Record<string, string> = { pending: "Ожидает подтверждения", confirmed: "Подтверждено", rejected: "Отклонено", completed: "Завершено", Pending: "Ожидает оплаты", Paid: "Оплачено", Active: "Активно", Completed: "Завершено", Cancelled: "Отменено" };
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -158,30 +160,28 @@ export default function Account() {
                           {format(parseISO(booking.startDate), "d MMM", { locale: ru })} - {format(parseISO(booking.endDate), "d MMM yyyy", { locale: ru })}
                         </span>
                       </div>
+                      <div className="mt-3 rounded-xl border border-border/50 bg-secondary/30 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Оплата бронирования</p>
+                            <p className="font-semibold">Итого: {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽</p>
+                            <p className="text-sm text-muted-foreground">Статус: {paymentStatusLabels[booking.paymentStatus] || booking.paymentStatus}</p>
+                          </div>
+                          {booking.paymentStatus === "paid" ? (
+                            <Badge>Оплачено</Badge>
+                          ) : (
+                            <Link href={`/payment/${booking.id}`}>
+                              <Button size="sm" data-testid={`button-pay-${booking.id}`}>Оплатить</Button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center justify-between mt-3">
                         <span className="font-semibold">
-                          {booking.days} дн. • {booking.totalPrice.toLocaleString("ru-RU")} ₽
+                          {booking.days} дн. • аренда {booking.totalPrice.toLocaleString("ru-RU")} ₽
                         </span>
                         <div className="flex gap-2">
-                          {(booking.status === "pending" || booking.status === "Pending") && (
-                            <>
-                              <Link href={`/checkout/${booking.id}`}>
-                                <Button size="sm" data-testid={`button-pay-${booking.id}`}>
-                                  Оплатить
-                                </Button>
-                              </Link>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => cancelMutation.mutate(booking.id)}
-                                disabled={cancelMutation.isPending}
-                                data-testid={`button-cancel-${booking.id}`}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          {(booking.status === "confirmed" || booking.status === "Paid") && (
+                          {(booking.status === "pending" || booking.status === "Pending" || booking.status === "confirmed" || booking.status === "Paid") && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -189,7 +189,7 @@ export default function Account() {
                               disabled={cancelMutation.isPending}
                               data-testid={`button-cancel-${booking.id}`}
                             >
-                              Отменить
+                              {booking.status === "pending" || booking.status === "Pending" ? <X className="h-4 w-4" /> : "Отменить"}
                             </Button>
                           )}
                         </div>
