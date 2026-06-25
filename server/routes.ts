@@ -4,7 +4,7 @@ import session from "express-session";
 import bcrypt from "bcryptjs";
 import { differenceInDays, parseISO } from "date-fns";
 import { storage } from "./storage";
-import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema } from "@shared/schema";
+import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema } from "@shared/schema";
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
@@ -20,14 +20,32 @@ const SessionStore = MemoryStore(session);
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
+function detectImageContentType(data: Buffer) {
+  if (data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    data.length > 12 &&
+    data.subarray(0, 4).toString("ascii") === "RIFF" &&
+    data.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return undefined;
+}
+
 function imageToDataUrl(image: UploadedImage) {
-  if (!ALLOWED_IMAGE_TYPES.has(image.contentType)) {
+  const detectedContentType = detectImageContentType(image.data);
+  if (!ALLOWED_IMAGE_TYPES.has(image.contentType) || !detectedContentType || detectedContentType !== image.contentType) {
     throw new Error("Можно загружать только PNG, JPG, JPEG или WEBP");
   }
   if (image.data.length > MAX_UPLOAD_SIZE) {
     throw new Error("Размер изображения не должен превышать 10 МБ");
   }
-  return `data:${image.contentType};base64,${image.data.toString("base64")}`;
+  return itemImageSchema.parse(`data:${detectedContentType};base64,${image.data.toString("base64")}`);
 }
 
 type UploadedImage = { filename: string; contentType: string; data: Buffer };
@@ -50,8 +68,9 @@ async function readMultipartImages(req: Request): Promise<UploadedImage[]> {
     if (!part.includes('Content-Disposition') || !part.includes('filename=')) return [];
     const [rawHeaders, rawContent = ""] = part.split("\r\n\r\n");
     const filename = rawHeaders.match(/filename="([^"]+)"/)?.[1] || "";
-    const contentType = rawHeaders.match(/Content-Type:\s*([^\r\n]+)/i)?.[1]?.trim() || "";
+    const contentType = rawHeaders.match(/Content-Type:\s*([^\r\n]+)/i)?.[1]?.trim().toLowerCase() || "";
     const content = rawContent.replace(/\r\n$/, "");
+    if (!filename || !content) return [];
     return [{ filename, contentType, data: Buffer.from(content, "binary") }];
   });
 }
@@ -306,6 +325,28 @@ export async function registerRoutes(
       res.json({ urls });
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка загрузки изображений" });
+    }
+  });
+
+
+  app.post("/api/admin/items/:id/images", requireAdmin, async (req, res) => {
+    try {
+      const itemId = getSingleParam(req.params.id);
+      const item = await storage.getItem(itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Товар не найден" });
+      }
+
+      const uploadedImages = await readMultipartImages(req);
+      if (uploadedImages.length === 0) {
+        return res.status(400).json({ message: "Выберите хотя бы одно изображение" });
+      }
+
+      const urls = uploadedImages.map(imageToDataUrl);
+      const updated = await storage.updateItem(itemId, { images: [...item.images, ...urls] });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Ошибка сохранения изображений" });
     }
   });
 
