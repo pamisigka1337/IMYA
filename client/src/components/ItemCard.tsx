@@ -6,6 +6,9 @@ interface ItemCardProps {
   item: Item;
 }
 
+const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
+const itemStatusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = { available: "default", booked: "secondary", unavailable: "destructive" };
+
 function formatPrice(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n) + " ₽";
 }
@@ -30,9 +33,14 @@ export function ItemCard({ item }: ItemCardProps) {
             <span className="text-muted-foreground">{item.category} • {item.size}</span>
             <span className="text-primary font-semibold">{formatPrice(item.pricePerDay)}/день</span>
           </div>
-          {item.condition === "Новое" && (
-            <Badge className="mt-2 bg-green-600 text-white text-xs">Новое</Badge>
-          )}
+          <div className="mt-2 flex gap-2 flex-wrap">
+            <Badge variant={itemStatusVariants[item.status] || "outline"} className="text-xs">
+              {itemStatusLabels[item.status] || item.status}
+            </Badge>
+            {item.condition === "Новое" && (
+              <Badge className="bg-green-600 text-white text-xs">Новое</Badge>
+            )}
+          </div>
         </div>
       </div>
     </Link>

@@ -16,6 +16,8 @@ import { ArrowLeft, CalendarIcon, Shield, CheckCircle, AlertCircle } from "lucid
 import { Link } from "wouter";
 import type { Item, Booking } from "@shared/schema";
 
+const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
+
 export default function ItemDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -80,6 +82,11 @@ export default function ItemDetail() {
       return;
     }
     
+    if (!canBookItem) {
+      toast({ title: "Товар недоступен", description: "Этот товар сейчас нельзя забронировать", variant: "destructive" });
+      return;
+    }
+
     if (!startDate || !endDate) {
       toast({
         title: "Выберите даты",
@@ -89,6 +96,11 @@ export default function ItemDetail() {
       return;
     }
     
+    if (hasDateError) {
+      toast({ title: "Некорректные даты", description: "Дата окончания не может быть раньше даты начала", variant: "destructive" });
+      return;
+    }
+
     createBookingMutation.mutate({
       itemId: id!,
       startDate: format(startDate, "yyyy-MM-dd"),
@@ -99,6 +111,8 @@ export default function ItemDetail() {
   const days = startDate && endDate ? differenceInDays(endDate, startDate) + 1 : 0;
   const totalPrice = item ? days * item.pricePerDay : 0;
   const totalWithDeposit = item ? totalPrice + item.deposit : 0;
+  const canBookItem = item?.status === "available";
+  const hasDateError = !!startDate && !!endDate && days < 1;
 
   if (itemLoading) {
     return (
@@ -159,7 +173,7 @@ export default function ItemDetail() {
 
           <div className="space-y-6">
             <div>
-              <Badge variant="secondary" className="mb-3 rounded-lg">{item.brand}</Badge>
+              <div className="flex gap-2 flex-wrap mb-3"><Badge variant="secondary" className="rounded-lg">{item.brand}</Badge><Badge>{itemStatusLabels[item.status] || item.status}</Badge></div>
               <h1 className="text-2xl md:text-3xl font-bold">{item.title}</h1>
               <p className="text-muted-foreground mt-2">{item.category} • Размер {item.size}</p>
             </div>
@@ -227,6 +241,8 @@ export default function ItemDetail() {
                   </Popover>
                 </div>
 
+                {hasDateError && <p className="text-sm text-destructive">Дата окончания не может быть раньше даты начала</p>}
+                {!canBookItem && <p className="text-sm text-destructive">Товар сейчас {itemStatusLabels[item.status]?.toLowerCase()} и недоступен для бронирования.</p>}
                 {days > 0 && (
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between text-sm">

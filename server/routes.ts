@@ -4,7 +4,7 @@ import session from "express-session";
 import bcrypt from "bcryptjs";
 import { differenceInDays, parseISO } from "date-fns";
 import { storage } from "./storage";
-import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema } from "@shared/schema";
+import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema } from "@shared/schema";
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
@@ -188,8 +188,19 @@ export async function registerRoutes(
 
   // Items routes
   app.get("/api/items", async (req, res) => {
-    const items = await storage.getItems();
-    res.json(items.filter(item => item.isActive));
+    const { search = "", category = "", minPrice = "", maxPrice = "" } = req.query;
+    const q = String(search).toLowerCase().trim();
+    const min = minPrice ? Number(minPrice) : undefined;
+    const max = maxPrice ? Number(maxPrice) : undefined;
+    const allItems = await storage.getItems();
+    res.json(allItems.filter((item) => {
+      if (!item.isActive) return false;
+      if (q && !item.title.toLowerCase().includes(q)) return false;
+      if (category && String(category) !== "all" && item.category !== String(category)) return false;
+      if (Number.isFinite(min) && item.pricePerDay < min!) return false;
+      if (Number.isFinite(max) && item.pricePerDay > max!) return false;
+      return true;
+    }));
   });
 
   app.get("/api/items/:id", async (req, res) => {
@@ -221,6 +232,9 @@ export async function registerRoutes(
       if (!item || !item.isActive) {
         return res.status(404).json({ message: "Товар не найден" });
       }
+      if (item.status !== "available") {
+        return res.status(400).json({ message: "Товар сейчас нельзя забронировать" });
+      }
 
       const available = await storage.checkAvailability(data.itemId, data.startDate, data.endDate);
       if (!available) {
@@ -230,6 +244,9 @@ export async function registerRoutes(
       const startDate = parseISO(data.startDate);
       const endDate = parseISO(data.endDate);
       const days = differenceInDays(endDate, startDate) + 1;
+      if (days < 1) {
+        return res.status(400).json({ message: "Дата окончания не может быть раньше даты начала" });
+      }
       const totalPrice = days * item.pricePerDay;
 
       const booking = await storage.createBooking({
@@ -240,7 +257,7 @@ export async function registerRoutes(
         days,
         totalPrice,
         deposit: item.deposit,
-        status: "Pending",
+        status: "pending",
       });
 
       res.json(booking);
@@ -278,11 +295,12 @@ export async function registerRoutes(
     if (booking.userId !== req.session.userId) {
       return res.status(403).json({ message: "Доступ запрещён" });
     }
-    if (booking.status !== "Pending") {
+    if (booking.status !== "pending" && booking.status !== "Pending") {
       return res.status(400).json({ message: "Бронь уже оплачена или отменена" });
     }
 
-    const updated = await storage.updateBookingStatus(bookingId, "Paid");
+    const updated = await storage.updateBookingStatus(bookingId, "confirmed");
+    await storage.updateItemStatus(booking.itemId, "booked");
     res.json(updated);
   });
 
@@ -298,11 +316,14 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Доступ запрещён" });
       }
     }
-    if (booking.status === "Active") {
+    if (booking.status === "confirmed" || booking.status === "Active") {
       return res.status(400).json({ message: "Нельзя отменить активную аренду" });
     }
 
-    const updated = await storage.updateBookingStatus(bookingId, "Cancelled");
+    const updated = await storage.updateBookingStatus(bookingId, "rejected");
+    if (!(await storage.hasActiveConfirmedBooking(booking.itemId))) {
+      await storage.updateItemStatus(booking.itemId, "available");
+    }
     res.json(updated);
   });
 
@@ -375,6 +396,17 @@ export async function registerRoutes(
   });
 
 
+  app.patch("/api/items/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const status = itemStatusSchema.parse(req.body.status);
+      const item = await storage.updateItemStatus(getSingleParam(req.params.id), status);
+      if (!item) return res.status(404).json({ message: "Товар не найден" });
+      res.json(item);
+    } catch (error: any) {
+      res.status(400).json({ message: "Некорректный статус товара" });
+    }
+  });
+
   app.delete("/api/admin/items/:id", requireAdmin, async (req, res) => {
     try {
       const itemId = getSingleParam(req.params.id);
@@ -402,6 +434,10 @@ export async function registerRoutes(
     res.json(bookings);
   });
 
+  app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
+    res.json(await storage.getAdminStats());
+  });
+
   app.patch("/api/admin/bookings/:id/status", requireAdmin, async (req, res) => {
     try {
       const bookingId = getSingleParam(req.params.id);
@@ -410,6 +446,14 @@ export async function registerRoutes(
       const booking = await storage.updateBookingStatus(bookingId, validatedStatus);
       if (!booking) {
         return res.status(404).json({ message: "Бронь не найдена" });
+      }
+      if (validatedStatus === "confirmed") {
+        await storage.updateItemStatus(booking.itemId, "booked");
+      }
+      if (validatedStatus === "rejected" || validatedStatus === "completed") {
+        if (!(await storage.hasActiveConfirmedBooking(booking.itemId))) {
+          await storage.updateItemStatus(booking.itemId, "available");
+        }
       }
       res.json(booking);
     } catch (error: any) {

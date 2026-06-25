@@ -33,6 +33,11 @@ function Router() {
           <Account />
         </ProtectedRoute>
       </Route>
+      <Route path="/my-bookings">
+        <ProtectedRoute>
+          <Account />
+        </ProtectedRoute>
+      </Route>
       <Route path="/admin">
         <ProtectedRoute requireAdmin>
           <Admin />

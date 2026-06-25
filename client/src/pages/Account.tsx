@@ -14,15 +14,13 @@ import type { Booking, Item } from "@shared/schema";
 
 type BookingWithItem = Booking & { item: Item };
 
-const statusLabels: Record<string, string> = {
-  Pending: "Ожидает оплаты",
-  Paid: "Оплачено",
-  Active: "Активно",
-  Completed: "Завершено",
-  Cancelled: "Отменено",
-};
+const statusLabels: Record<string, string> = { pending: "Ожидает подтверждения", confirmed: "Подтверждено", rejected: "Отклонено", completed: "Завершено", Pending: "Ожидает оплаты", Paid: "Оплачено", Active: "Активно", Completed: "Завершено", Cancelled: "Отменено" };
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pending: "secondary",
+  confirmed: "default",
+  rejected: "destructive",
+  completed: "outline",
   Pending: "secondary",
   Paid: "default",
   Active: "default",
@@ -162,10 +160,10 @@ export default function Account() {
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <span className="font-semibold">
-                          {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
+                          {booking.days} дн. • {booking.totalPrice.toLocaleString("ru-RU")} ₽
                         </span>
                         <div className="flex gap-2">
-                          {booking.status === "Pending" && (
+                          {(booking.status === "pending" || booking.status === "Pending") && (
                             <>
                               <Link href={`/checkout/${booking.id}`}>
                                 <Button size="sm" data-testid={`button-pay-${booking.id}`}>
@@ -183,7 +181,7 @@ export default function Account() {
                               </Button>
                             </>
                           )}
-                          {booking.status === "Paid" && (
+                          {(booking.status === "confirmed" || booking.status === "Paid") && (
                             <Button
                               size="sm"
                               variant="outline"

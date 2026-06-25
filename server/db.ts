@@ -51,7 +51,8 @@ export function initializeDatabase() {
       images TEXT NOT NULL DEFAULT '[]',
       condition TEXT NOT NULL,
       description TEXT NOT NULL,
-      is_active INTEGER NOT NULL DEFAULT 1
+      is_active INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'available'
     );
 
     CREATE TABLE IF NOT EXISTS bookings (
@@ -63,7 +64,7 @@ export function initializeDatabase() {
       days INTEGER NOT NULL,
       total_price INTEGER NOT NULL,
       deposit INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending',
+      status TEXT NOT NULL DEFAULT 'pending',
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -75,4 +76,11 @@ export function initializeDatabase() {
       phone TEXT NOT NULL
     );
   `);
+
+  const itemColumns = sqlite.prepare("PRAGMA table_info(items)").all() as any[];
+  if (!itemColumns.some((column) => column[1] === "status")) {
+    sqlite.exec("ALTER TABLE items ADD COLUMN status TEXT NOT NULL DEFAULT 'available'");
+  }
+
+  sqlite.exec("UPDATE items SET status = 'unavailable' WHERE is_active = 0 AND status = 'available'");
 }

@@ -20,7 +20,7 @@ export function Header() {
 
   const navLinks = [
     { href: "/catalog", label: "Каталог" },
-    { href: "/account", label: "Кабинет" },
+    { href: "/my-bookings", label: "Мои бронирования" },
   ];
 
   return (

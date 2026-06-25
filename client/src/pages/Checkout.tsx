@@ -110,7 +110,7 @@ export default function Checkout() {
   const startDate = parseISO(booking.startDate);
   const endDate = parseISO(booking.endDate);
   const pickupPoint = pickupPoints?.[0];
-  const isPaid = booking.status === "Paid" || booking.status === "Active" || booking.status === "Completed";
+  const isPaid = booking.status === "confirmed" || booking.status === "Paid" || booking.status === "Active" || booking.status === "completed" || booking.status === "Completed";
 
   return (
     <div className="min-h-screen py-8 md:py-12">
@@ -130,11 +130,10 @@ export default function Checkout() {
               <CardTitle className="text-lg flex items-center justify-between gap-2 flex-wrap">
                 <span>Детали бронирования</span>
                 <Badge variant={isPaid ? "default" : "secondary"}>
-                  {booking.status === "Pending" && "Ожидает оплаты"}
-                  {booking.status === "Paid" && "Оплачено"}
-                  {booking.status === "Active" && "Активно"}
-                  {booking.status === "Completed" && "Завершено"}
-                  {booking.status === "Cancelled" && "Отменено"}
+                  {(booking.status === "pending" || booking.status === "Pending") && "Ожидает подтверждения"}
+                  {(booking.status === "confirmed" || booking.status === "Paid" || booking.status === "Active") && "Подтверждено"}
+                  {(booking.status === "completed" || booking.status === "Completed") && "Завершено"}
+                  {(booking.status === "rejected" || booking.status === "Cancelled") && "Отклонено"}
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -215,7 +214,7 @@ export default function Checkout() {
             </Card>
           )}
 
-          {!isPaid && booking.status === "Pending" && (
+          {!isPaid && (booking.status === "pending" || booking.status === "Pending") && (
             <Button
               className="w-full rounded-xl"
               size="lg"
