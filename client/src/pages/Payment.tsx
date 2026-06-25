@@ -19,9 +19,8 @@ import { formatRussianDays } from "@shared/rental";
 type BookingWithItem = Booking & { item: Item };
 type PaymentMethod = "card" | "sbp";
 
-const paymentStatusLabels: Record<string, string> = { pending: "Ожидает оплаты", paid: "Оплачено", failed: "Ошибка оплаты" };
-const paymentMethodLabels: Record<string, string> = { card: "Банковская карта", sbp: "СБП" };
-const STUDY_NOTICE = "Оплата используется в учебном режиме, реальные деньги не списываются";
+const paymentStatusLabels: Record<string, string> = { pending: "Ожидает оплаты", paid: "Оплачено", failed: "Ошибка оплаты", refund_pending: "Возврат оформлен", refunded: "Возвращено" };
+const paymentMethodLabels: Record<string, string> = { card: "Карта", sbp: "СБП" };
 
 function maskCardNumber(value: string) {
   return value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
@@ -57,7 +56,7 @@ export default function Payment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings", bookingId, "payment"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings/my"] });
-      const message = "Оплата прошла успешно";
+      const message = "Оплата успешна.";
       setSuccessMessage(message);
       setCardForm({ number: "", expiry: "", cvc: "", holder: "" });
       toast({ title: "Оплата успешна", description: message });
@@ -101,7 +100,7 @@ export default function Payment() {
         <Link href="/account" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition"><ArrowLeft className="h-4 w-4 mr-1" />Мои бронирования</Link>
         <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground flex gap-3">
           <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
-          <div><p className="font-semibold">Оплата</p><p className="text-muted-foreground">{STUDY_NOTICE}. Данные карты не сохраняются и не отправляются на сервер.</p></div>
+          <div><p className="font-semibold">Оплата</p><p className="text-muted-foreground">Данные карты используются только для проверки формы и не сохраняются.</p></div>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_1.15fr] gap-6">
@@ -128,27 +127,27 @@ export default function Payment() {
             <CardHeader><CardTitle>{isPaid ? "Бронирование оплачено" : "Выберите способ оплаты"}</CardTitle></CardHeader>
             <CardContent>
               {isPaid || successMessage ? (
-                <div className="text-center py-10 space-y-4"><CheckCircle className="h-14 w-14 text-green-600 mx-auto" /><h3 className="text-xl font-semibold">{successMessage || "Оплачено"}</h3><p className="text-muted-foreground">{STUDY_NOTICE}.</p><Link href="/account"><Button className="rounded-xl">Вернуться в личный кабинет</Button></Link></div>
+                <div className="text-center py-10 space-y-4"><CheckCircle className="h-14 w-14 text-green-600 mx-auto" /><h3 className="text-xl font-semibold">{successMessage || "Оплата успешна."}</h3><p className="text-muted-foreground">Статус оплаты обновлён в бронировании.</p><Link href="/account"><Button className="rounded-xl">Вернуться в личный кабинет</Button></Link></div>
               ) : (
                 <Tabs defaultValue="card">
                   <TabsList className="grid w-full grid-cols-2 rounded-xl"><TabsTrigger value="card">Оплата картой</TabsTrigger><TabsTrigger value="sbp">Оплата через СБП</TabsTrigger></TabsList>
                   <TabsContent value="card" className="mt-6 space-y-5">
-                    <div className="rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-700 p-5 text-white shadow-lg"><p className="text-xs opacity-70">КАРТА</p><p className="mt-8 text-xl tracking-[0.25em]">{cardForm.number || "0000 0000 0000 0000"}</p><div className="mt-6 flex justify-between text-sm"><span>{cardForm.holder || "ВЛАДЕЛЕЦ КАРТЫ"}</span><span>{cardForm.expiry || "ММ/ГГ"}</span></div></div>
+                    <div className="rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-700 p-5 text-white shadow-lg"><p className="text-xs opacity-70">Карта</p><p className="mt-8 text-xl tracking-[0.25em]">{cardForm.number || "0000 0000 0000 0000"}</p><div className="mt-6 flex justify-between text-sm"><span>{cardForm.holder || "ВЛАДЕЛЕЦ КАРТЫ"}</span><span>{cardForm.expiry || "ММ/ГГ"}</span></div></div>
                     <div className="grid gap-4">
                       <div><Label htmlFor="card-number">Номер карты</Label><Input id="card-number" inputMode="numeric" value={cardForm.number} onChange={(e) => setCardForm((f) => ({ ...f, number: maskCardNumber(e.target.value) }))} placeholder="0000 0000 0000 0000" /></div>
                       <div className="grid grid-cols-2 gap-4"><div><Label htmlFor="expiry">Срок действия</Label><Input id="expiry" inputMode="numeric" value={cardForm.expiry} onChange={(e) => setCardForm((f) => ({ ...f, expiry: maskExpiry(e.target.value) }))} placeholder="ММ/ГГ" /></div><div><Label htmlFor="cvc">CVC</Label><Input id="cvc" inputMode="numeric" value={cardForm.cvc} onChange={(e) => setCardForm((f) => ({ ...f, cvc: e.target.value.replace(/\D/g, "").slice(0, 3) }))} placeholder="123" /></div></div>
                       <div><Label htmlFor="holder">Имя держателя</Label><Input id="holder" value={cardForm.holder} onChange={(e) => setCardForm((f) => ({ ...f, holder: e.target.value.toUpperCase().slice(0, 32) }))} placeholder="IVAN IVANOV" /></div>
                     </div>
-                    <p className="text-xs text-muted-foreground">{STUDY_NOTICE}. Поля карты используются только в браузере и не отправляются на сервер.</p>
+                    <p className="text-xs text-muted-foreground">Поля карты используются только в браузере и не отправляются на сервер.</p>
                     {cardError && <p className="text-sm text-destructive">{cardError}</p>}
-                    <Button className="w-full rounded-xl" size="lg" disabled={payMutation.isPending} onClick={handleCardPayment}><CreditCard className="mr-2 h-4 w-4" />{payMutation.isPending ? "Обработка оплаты..." : `Оплатить ${total.toLocaleString("ru-RU")} ₽`}</Button>
+                    <Button className="w-full rounded-xl" size="lg" disabled={payMutation.isPending || !!validateCardForm()} onClick={handleCardPayment}><CreditCard className="mr-2 h-4 w-4" />{payMutation.isPending ? "Обработка оплаты..." : `Оплатить ${total.toLocaleString("ru-RU")} ₽`}</Button>
                   </TabsContent>
                   <TabsContent value="sbp" className="mt-6 space-y-5 text-center">
                     <h3 className="text-lg font-semibold">Оплата через СБП</h3>
                     <div className="mx-auto grid h-48 w-48 grid-cols-7 gap-1 rounded-2xl border bg-white p-4">{Array.from({ length: 49 }).map((_, i) => <span key={i} className={(i * 7 + i) % 5 === 0 || i < 14 || i % 7 < 2 ? "bg-zinc-900" : "bg-zinc-200"} />)}</div>
                     <QrCode className="h-6 w-6 mx-auto text-primary" />
                     <p className="font-medium">Отсканируйте QR-код в приложении банка.</p>
-                    <p className="text-sm text-muted-foreground">{STUDY_NOTICE}.</p>
+                    <p className="text-sm text-muted-foreground">Подтвердите оплату после сканирования QR-кода.</p>
                     <Button className="w-full rounded-xl" size="lg" disabled={payMutation.isPending} onClick={() => payMutation.mutate("sbp")}>{payMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Я оплатил через СБП</Button>
                   </TabsContent>
                 </Tabs>

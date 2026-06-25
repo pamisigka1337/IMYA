@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 
 import { storage } from "./storage";
 import { registerSchema, loginSchema, createBookingSchema, createItemSchema, updateItemSchema, bookingStatusSchema, itemImageSchema, itemStatusSchema, paymentMethodSchema } from "@shared/schema";
@@ -19,6 +20,32 @@ declare module "express-session" {
 const SessionStore = MemoryStore(session);
 
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+
+const notificationSettingsSchema = z.object({
+  bookingConfirmed: z.boolean(),
+  refunds: z.boolean(),
+  paymentStatus: z.boolean(),
+});
+
+const profilePatchSchema = z.object({
+  name: z.string().min(2, "Имя должно содержать минимум 2 символа").optional(),
+  phone: z.string().max(40).nullable().optional(),
+  city: z.string().max(80).nullable().optional(),
+  preferredPickupPoint: z.string().max(160).nullable().optional(),
+  notificationSettings: notificationSettingsSchema.optional(),
+});
+
+const passwordPatchSchema = z.object({
+  currentPassword: z.string().min(1, "Введите текущий пароль"),
+  newPassword: z.string().min(6, "Новый пароль должен содержать минимум 6 символов"),
+  repeatPassword: z.string().min(1, "Повторите новый пароль"),
+}).refine((data) => data.newPassword === data.repeatPassword, { message: "Новый пароль и повтор должны совпадать", path: ["repeatPassword"] });
+
+function publicUser(user: Awaited<ReturnType<typeof storage.getUser>>) {
+  if (!user) return undefined;
+  return { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, city: user.city, preferredPickupPoint: user.preferredPickupPoint, notificationSettings: user.notificationSettings };
+}
+
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function detectImageContentType(data: Buffer) {
@@ -187,6 +214,51 @@ export async function registerRoutes(
     res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   });
 
+
+  app.get("/api/profile", requireAuth, async (req, res) => {
+    const user = await storage.getUser(req.session.userId!);
+    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+    await storage.completeDueRefunds(req.session.userId!);
+    const bookings = await storage.getBookingsByUser(req.session.userId!);
+    const stats = await storage.getProfileStats(req.session.userId!);
+    const paymentHistory = bookings
+      .filter((booking) => booking.paidAt)
+      .map((booking) => ({
+        id: booking.id,
+        paidAt: booking.paidAt,
+        amount: booking.totalPrice + booking.deposit,
+        paymentMethod: booking.paymentMethod,
+        paymentStatus: booking.paymentStatus,
+        refundStatus: booking.refundStatus,
+        itemTitle: booking.item.title,
+      }));
+    res.json({ user: publicUser(user), stats, paymentHistory });
+  });
+
+  app.patch("/api/profile", requireAuth, async (req, res) => {
+    try {
+      const data = profilePatchSchema.parse(req.body);
+      const user = await storage.updateUserProfile(req.session.userId!, data);
+      res.json({ user: publicUser(user) });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Не удалось сохранить профиль" });
+    }
+  });
+
+  app.patch("/api/profile/password", requireAuth, async (req, res) => {
+    try {
+      const data = passwordPatchSchema.parse(req.body);
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+      const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+      if (!valid) return res.status(400).json({ message: "Текущий пароль указан неверно" });
+      await storage.updateUserPassword(user.id, await bcrypt.hash(data.newPassword, 10));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Не удалось изменить пароль" });
+    }
+  });
+
   // Items routes
   app.get("/api/items", async (req, res) => {
     const { search = "", category = "", minPrice = "", maxPrice = "" } = req.query;
@@ -341,11 +413,11 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Доступ запрещён" });
       }
     }
-    if (booking.status === "confirmed" || booking.status === "Active") {
-      return res.status(400).json({ message: "Нельзя отменить активную аренду" });
+    if (booking.status === "completed" || booking.status === "Completed") {
+      return res.status(400).json({ message: "Нельзя отменить завершённую аренду" });
     }
 
-    const updated = await storage.updateBookingStatus(bookingId, "rejected");
+    const updated = await storage.cancelBooking(bookingId, booking.paymentStatus === "paid");
     if (!(await storage.hasActiveConfirmedBooking(booking.itemId))) {
       await storage.updateItemStatus(booking.itemId, "available");
     }

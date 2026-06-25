@@ -37,7 +37,11 @@ export function initializeDatabase() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'user'
+      role TEXT NOT NULL DEFAULT 'user',
+      phone TEXT,
+      city TEXT,
+      preferred_pickup_point TEXT,
+      notification_settings TEXT NOT NULL DEFAULT '{"bookingConfirmed":true,"refunds":true,"paymentStatus":true}'
     );
 
     CREATE TABLE IF NOT EXISTS items (
@@ -68,6 +72,9 @@ export function initializeDatabase() {
       payment_status TEXT NOT NULL DEFAULT 'pending',
       payment_method TEXT,
       paid_at TEXT,
+      refund_status TEXT,
+      refund_requested_at TEXT,
+      refund_completed_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -79,6 +86,14 @@ export function initializeDatabase() {
       phone TEXT NOT NULL
     );
   `);
+
+  const userColumnsStatement = sqlite.prepare("PRAGMA table_info(users)");
+  userColumnsStatement.setReturnArrays(true);
+  const userColumns = userColumnsStatement.all() as unknown[][];
+  if (!userColumns.some((column) => column[1] === "phone")) sqlite.exec("ALTER TABLE users ADD COLUMN phone TEXT");
+  if (!userColumns.some((column) => column[1] === "city")) sqlite.exec("ALTER TABLE users ADD COLUMN city TEXT");
+  if (!userColumns.some((column) => column[1] === "preferred_pickup_point")) sqlite.exec("ALTER TABLE users ADD COLUMN preferred_pickup_point TEXT");
+  if (!userColumns.some((column) => column[1] === "notification_settings")) sqlite.exec(`ALTER TABLE users ADD COLUMN notification_settings TEXT NOT NULL DEFAULT '{"bookingConfirmed":true,"refunds":true,"paymentStatus":true}'`);
 
   const bookingColumnsStatement = sqlite.prepare("PRAGMA table_info(bookings)");
   bookingColumnsStatement.setReturnArrays(true);
@@ -92,6 +107,9 @@ export function initializeDatabase() {
   if (!bookingColumns.some((column) => column[1] === "paid_at")) {
     sqlite.exec("ALTER TABLE bookings ADD COLUMN paid_at TEXT");
   }
+  if (!bookingColumns.some((column) => column[1] === "refund_status")) sqlite.exec("ALTER TABLE bookings ADD COLUMN refund_status TEXT");
+  if (!bookingColumns.some((column) => column[1] === "refund_requested_at")) sqlite.exec("ALTER TABLE bookings ADD COLUMN refund_requested_at TEXT");
+  if (!bookingColumns.some((column) => column[1] === "refund_completed_at")) sqlite.exec("ALTER TABLE bookings ADD COLUMN refund_completed_at TEXT");
 
   const itemColumnsStatement = sqlite.prepare("PRAGMA table_info(items)");
   itemColumnsStatement.setReturnArrays(true);
