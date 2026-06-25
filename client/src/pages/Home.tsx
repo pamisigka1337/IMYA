@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ItemCard } from "@/components/ItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Sparkles, Clock, Shield, MapPin, Phone } from "lucide-react";
@@ -11,6 +13,7 @@ function formatPrice(n: number) {
 }
 
 export default function Home() {
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["/api/items"],
   });
@@ -38,11 +41,16 @@ export default function Home() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/catalog">
-                <Button variant="outline" size="lg" className="rounded-xl" data-testid="button-how-it-works">
-                  Как это работает
-                </Button>
-              </Link>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="rounded-xl"
+                data-testid="button-how-it-works"
+                onClick={() => setIsHowItWorksOpen(true)}
+              >
+                Как это работает
+              </Button>
             </div>
           </div>
         </div>
@@ -51,6 +59,38 @@ export default function Home() {
           <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
         </div>
       </section>
+
+      <Dialog open={isHowItWorksOpen} onOpenChange={setIsHowItWorksOpen}>
+        <DialogContent className="rounded-3xl border-primary/20 bg-background/95 shadow-2xl sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Как это работает</DialogTitle>
+            <DialogDescription>
+              Простая инструкция, чтобы быстро забронировать наряд и спокойно подготовиться к мероприятию.
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="space-y-3 text-sm text-foreground">
+            {[
+              "Выберите понравившийся наряд в каталоге.",
+              "Откройте карточку товара и посмотрите фото, размер, цену и описание.",
+              "Нажмите кнопку бронирования и выберите удобную дату.",
+              "Заберите вещь в пункте выдачи.",
+              "После мероприятия верните вещь обратно в установленный срок.",
+            ].map((step, index) => (
+              <li key={step} className="flex gap-3 rounded-2xl border border-border/50 bg-card p-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                  {index + 1}
+                </span>
+                <span className="pt-1">{step}</span>
+              </li>
+            ))}
+          </ol>
+          <DialogFooter>
+            <Button className="rounded-xl" onClick={() => setIsHowItWorksOpen(false)}>
+              Понятно
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-6">

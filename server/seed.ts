@@ -151,51 +151,52 @@ const SEED_ITEMS = [
 ];
 
 const SEED_PICKUP_POINT = {
-  city: "Москва",
-  address: "ул. Тверская, д. 12, этаж 2, офис 205",
+  city: "Красноярск",
+  address: "78 Добровольческой Бригады улица, 15 этаж, 12 кабинет, 7",
   hours: "Пн-Вс: 10:00 - 21:00",
-  phone: "+7 (495) 123-45-67",
+  phone: "+7 (391) 123-45-67",
 };
+
+async function ensureSeedUser(name: string, email: string, password: string, role: string) {
+  const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (existing.length > 0) return;
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await db.insert(users).values({ name, email, passwordHash, role });
+  console.log(`${role === "admin" ? "Admin" : "Test"} user created: ${email} / ${password}`);
+}
+
+async function ensurePickupPoint() {
+  const existing = await db.select().from(pickupPoints).limit(1);
+  if (existing[0]) {
+    await db.update(pickupPoints).set(SEED_PICKUP_POINT).where(eq(pickupPoints.id, existing[0].id));
+    console.log("Pickup point updated");
+    return;
+  }
+
+  await db.insert(pickupPoints).values(SEED_PICKUP_POINT);
+  console.log("Pickup point created");
+}
 
 export async function seed() {
   console.log("Seeding database...");
 
+  await ensureSeedUser("Администратор", "admin@prokat.ru", "admin123", "admin");
+  await ensureSeedUser("Тестовый Пользователь", "user@test.ru", "user123", "user");
+  await ensurePickupPoint();
+
   // Check if already seeded
   const existingItems = await db.select().from(items).limit(1);
   if (existingItems.length > 0) {
-    console.log("Database already seeded, skipping...");
+    console.log("Database already has items, skipping item seed...");
     return;
   }
-
-  // Create admin user
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
-  await db.insert(users).values({
-    name: "Администратор",
-    email: "admin@prokat.ru",
-    passwordHash: adminPasswordHash,
-    role: "admin",
-  });
-  console.log("Admin user created: admin@prokat.ru / admin123");
-
-  // Create test user
-  const userPasswordHash = await bcrypt.hash("user123", 10);
-  await db.insert(users).values({
-    name: "Тестовый Пользователь",
-    email: "user@test.ru",
-    passwordHash: userPasswordHash,
-    role: "user",
-  });
-  console.log("Test user created: user@test.ru / user123");
 
   // Create items
   for (const item of SEED_ITEMS) {
     await db.insert(items).values(item);
   }
   console.log(`Created ${SEED_ITEMS.length} items`);
-
-  // Create pickup point
-  await db.insert(pickupPoints).values(SEED_PICKUP_POINT);
-  console.log("Pickup point created");
 
   console.log("Seeding complete!");
 }

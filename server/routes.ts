@@ -8,6 +8,8 @@ import { registerSchema, loginSchema, createBookingSchema, createItemSchema, upd
 import { initializeDatabase } from "./db";
 import { seed } from "./seed";
 import MemoryStore from "memorystore";
+import fs from "fs";
+import path from "path";
 
 declare module "express-session" {
   interface SessionData {
@@ -16,6 +18,48 @@ declare module "express-session" {
 }
 
 const SessionStore = MemoryStore(session);
+
+const UPLOAD_DIR = path.resolve(process.cwd(), "data", "uploads");
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function ensureUploadDir() {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+function sanitizeFilename(filename: string) {
+  const ext = path.extname(filename).toLowerCase();
+  const base = path.basename(filename, ext).replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+  return `${base}-${Date.now()}-${crypto.randomUUID()}${ext}`;
+}
+
+type UploadedImage = { filename: string; contentType: string; data: Buffer };
+
+async function readMultipartImages(req: Request): Promise<UploadedImage[]> {
+  const contentType = req.headers["content-type"] || "";
+  const boundaryMatch = contentType.match(/boundary=(?:(?:"([^"]+)")|([^;]+))/i);
+  if (!boundaryMatch) throw new Error("Некорректная форма загрузки");
+  const boundary = boundaryMatch[1] || boundaryMatch[2];
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buffer.length;
+    if (total > MAX_UPLOAD_SIZE * 10) throw new Error("Слишком большой запрос");
+    chunks.push(buffer);
+  }
+  const body = Buffer.concat(chunks).toString("binary");
+  return body.split(`--${boundary}`).flatMap((part): UploadedImage[] => {
+    if (!part.includes('Content-Disposition') || !part.includes('filename=')) return [];
+    const [rawHeaders, rawContent = ""] = part.split("\r\n\r\n");
+    const filename = rawHeaders.match(/filename="([^"]+)"/)?.[1] || "";
+    const contentType = rawHeaders.match(/Content-Type:\s*([^\r\n]+)/i)?.[1]?.trim() || "";
+    const content = rawContent.replace(/\r\n$/, "");
+    return [{ filename, contentType, data: Buffer.from(content, "binary") }];
+  });
+}
+
 
 function getSingleParam(param: string | string[]): string {
   return Array.isArray(param) ? param[0] : param;
@@ -61,6 +105,9 @@ export async function registerRoutes(
   // Create local SQLite tables and seed test data automatically.
   initializeDatabase();
   await seed();
+
+  ensureUploadDir();
+  app.use("/uploads", (await import("express")).default.static(UPLOAD_DIR));
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
@@ -251,6 +298,34 @@ export async function registerRoutes(
   app.get("/api/admin/items", requireAdmin, async (req, res) => {
     const items = await storage.getItems();
     res.json(items);
+  });
+
+
+  app.post("/api/admin/uploads", requireAdmin, async (req, res) => {
+    try {
+      const uploadedImages = await readMultipartImages(req);
+      if (uploadedImages.length === 0) {
+        return res.status(400).json({ message: "Выберите хотя бы одно изображение" });
+      }
+
+      const urls: string[] = [];
+      for (const image of uploadedImages) {
+        const ext = path.extname(image.filename).toLowerCase();
+        if (!ALLOWED_IMAGE_EXTENSIONS.has(ext) || !ALLOWED_IMAGE_TYPES.has(image.contentType)) {
+          return res.status(400).json({ message: "Можно загружать только jpg, jpeg, png или webp" });
+        }
+        if (image.data.length > MAX_UPLOAD_SIZE) {
+          return res.status(400).json({ message: "Размер каждого файла не должен превышать 5 МБ" });
+        }
+        const safeName = sanitizeFilename(image.filename);
+        fs.writeFileSync(path.join(UPLOAD_DIR, safeName), image.data);
+        urls.push(`/uploads/${safeName}`);
+      }
+
+      res.json({ urls });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Ошибка загрузки изображений" });
+    }
   });
 
   app.post("/api/admin/items", requireAdmin, async (req, res) => {

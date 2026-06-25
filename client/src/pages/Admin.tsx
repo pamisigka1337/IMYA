@@ -57,6 +57,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
 
   const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["/api/admin/items"],
@@ -84,12 +85,39 @@ export default function Admin() {
     },
   });
 
+
+  const uploadSelectedImages = async () => {
+    if (!selectedFiles || selectedFiles.length === 0) return [];
+
+    const formData = new FormData();
+    Array.from(selectedFiles).forEach((file) => formData.append("images", file));
+
+    const res = await fetch("/api/admin/uploads", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
+
+    const data = (await res.json()) as { urls: string[] };
+    return data.urls;
+  };
+
+  const buildItemPayload = async (data: ItemFormData) => {
+    const urlImages = data.images
+      ? data.images.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+    const uploadedImages = await uploadSelectedImages();
+    return { ...data, images: [...urlImages, ...uploadedImages] };
+  };
+
   const createItemMutation = useMutation({
     mutationFn: async (data: ItemFormData) => {
-      const payload = {
-        ...data,
-        images: data.images ? data.images.split(",").map((s) => s.trim()) : [],
-      };
+      const payload = await buildItemPayload(data);
       const res = await apiRequest("POST", "/api/admin/items", payload);
       return res.json();
     },
@@ -98,6 +126,7 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
       setIsDialogOpen(false);
       form.reset();
+      setSelectedFiles(null);
       toast({ title: "Товар создан" });
     },
     onError: (error: Error) => {
@@ -107,10 +136,7 @@ export default function Admin() {
 
   const updateItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: ItemFormData }) => {
-      const payload = {
-        ...data,
-        images: data.images ? data.images.split(",").map((s) => s.trim()) : [],
-      };
+      const payload = await buildItemPayload(data);
       const res = await apiRequest("PATCH", `/api/admin/items/${id}`, payload);
       return res.json();
     },
@@ -120,6 +146,7 @@ export default function Admin() {
       setIsDialogOpen(false);
       setEditingItem(null);
       form.reset();
+      setSelectedFiles(null);
       toast({ title: "Товар обновлён" });
     },
     onError: (error: Error) => {
@@ -155,6 +182,7 @@ export default function Admin() {
       images: item.images.join(", "),
       isActive: item.isActive,
     });
+    setSelectedFiles(null);
     setIsDialogOpen(true);
   };
 
@@ -172,6 +200,7 @@ export default function Admin() {
       images: "",
       isActive: true,
     });
+    setSelectedFiles(null);
     setIsDialogOpen(true);
   };
 
@@ -392,6 +421,21 @@ export default function Admin() {
                             </FormItem>
                           )}
                         />
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="image-files">Загрузить фото с компьютера</FormLabel>
+                          <Input
+                            id="image-files"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            onChange={(event) => setSelectedFiles(event.target.files)}
+                            data-testid="input-image-files"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Можно добавить несколько jpg, jpeg, png или webp. Максимум 5 МБ на файл.
+                            URL-картинки выше продолжат работать.
+                          </p>
+                        </div>
                         <FormField
                           control={form.control}
                           name="isActive"
