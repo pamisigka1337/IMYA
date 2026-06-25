@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 
 import { ArrowLeft, MapPin, Clock, Phone, CheckCircle, CreditCard } from "lucide-react";
 import type { Booking, Item, PickupPoint } from "@shared/schema";
+import { formatRussianDays } from "@shared/rental";
 
 type BookingWithItem = Booking & { item: Item };
 
@@ -150,7 +151,7 @@ export default function Checkout() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Аренда ({booking.days} {booking.days === 1 ? "день" : booking.days < 5 ? "дня" : "дней"} × {booking.item.pricePerDay.toLocaleString("ru-RU")} ₽)
+                    Аренда ({booking.days} {formatRussianDays(booking.days)} × {booking.item.pricePerDay.toLocaleString("ru-RU")} ₽)
                   </span>
                   <span>{booking.totalPrice.toLocaleString("ru-RU")} ₽</span>
                 </div>
@@ -199,7 +200,7 @@ export default function Checkout() {
               data-testid="button-pay"
             >
               <CreditCard className="mr-2 h-4 w-4" />
-              Перейти к демо-оплате {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
+              Перейти к оплате {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
             </Button>
           )}
 

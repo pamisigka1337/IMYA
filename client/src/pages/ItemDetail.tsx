@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format, differenceInDays, parseISO, addDays, isBefore, isAfter } from "date-fns";
+import { format, parseISO, isBefore, isAfter } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, CalendarIcon, Shield, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import type { Item, Booking } from "@shared/schema";
+import { calculateRentalDays, formatRussianDays, getRentalDateError } from "@shared/rental";
 
 const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
 
@@ -97,7 +98,7 @@ export default function ItemDetail() {
     }
     
     if (hasDateError) {
-      toast({ title: "Некорректные даты", description: "Дата окончания не может быть раньше даты начала", variant: "destructive" });
+      toast({ title: "Некорректные даты", description: dateError || "Дата окончания не может быть раньше даты начала", variant: "destructive" });
       return;
     }
 
@@ -108,11 +109,12 @@ export default function ItemDetail() {
     });
   };
 
-  const days = startDate && endDate ? differenceInDays(endDate, startDate) + 1 : 0;
+  const days = startDate && endDate ? calculateRentalDays(startDate, endDate) : 0;
   const totalPrice = item ? days * item.pricePerDay : 0;
   const totalWithDeposit = item ? totalPrice + item.deposit : 0;
   const canBookItem = item?.status === "available";
-  const hasDateError = !!startDate && !!endDate && days < 1;
+  const dateError = getRentalDateError(startDate, endDate);
+  const hasDateError = !!dateError;
 
   if (itemLoading) {
     return (
@@ -214,7 +216,7 @@ export default function ItemDetail() {
                         onSelect={(date) => {
                           setStartDate(date);
                           if (date && endDate && isBefore(endDate, date)) {
-                            setEndDate(addDays(date, 1));
+                            setEndDate(undefined);
                           }
                         }}
                         disabled={disabledDays}
@@ -241,12 +243,12 @@ export default function ItemDetail() {
                   </Popover>
                 </div>
 
-                {hasDateError && <p className="text-sm text-destructive">Дата окончания не может быть раньше даты начала</p>}
+                {hasDateError && <p className="text-sm text-destructive">{dateError}</p>}
                 {!canBookItem && <p className="text-sm text-destructive">Товар сейчас {itemStatusLabels[item.status]?.toLowerCase()} и недоступен для бронирования.</p>}
                 {days > 0 && (
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Аренда ({days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"})</span>
+                      <span className="text-muted-foreground">Аренда ({days} {formatRussianDays(days)})</span>
                       <span>{totalPrice.toLocaleString("ru-RU")} ₽</span>
                     </div>
                     <div className="flex justify-between text-sm">

@@ -22,6 +22,7 @@ import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2, BarChart3 } from "lucide-react";
 import type { Item, Booking, User } from "@shared/schema";
+import { formatRussianDays } from "@shared/rental";
 
 type BookingWithItem = Booking & { item: Item; user: User };
 
@@ -673,7 +674,7 @@ export default function Admin() {
                               {booking.user?.name || "Пользователь"} • {format(parseISO(booking.startDate), "d MMM", { locale: ru })} - {format(parseISO(booking.endDate), "d MMM", { locale: ru })}
                             </p>
                             <p className="text-sm font-medium text-primary mt-1">
-                              {booking.days} дн. • {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
+                              {booking.days} {formatRussianDays(booking.days)} • {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
                             </p>
                             <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                               <span>Статус брони: {statusLabels[booking.status] || booking.status}</span>
