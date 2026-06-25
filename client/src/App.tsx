@@ -17,6 +17,9 @@ import Account from "@/pages/Account";
 import Admin from "@/pages/Admin";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import HowToRent from "@/pages/HowToRent";
+import RentalRules from "@/pages/RentalRules";
+import Receipt from "@/pages/Receipt";
 
 function Router() {
   return (
@@ -24,6 +27,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/catalog" component={Catalog} />
       <Route path="/item/:id" component={ItemDetail} />
+      <Route path="/how-to-rent" component={HowToRent} />
+      <Route path="/rental-rules" component={RentalRules} />
+      <Route path="/receipt/:bookingId"><ProtectedRoute><Receipt /></ProtectedRoute></Route>
       <Route path="/checkout/:bookingId">
         <ProtectedRoute>
           <Checkout />

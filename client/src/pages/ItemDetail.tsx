@@ -12,9 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, CalendarIcon, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Shield, CheckCircle, AlertCircle, Heart, Star } from "lucide-react";
 import { Link } from "wouter";
-import type { Item, Booking } from "@shared/schema";
+import type { Item, Booking, ReviewWithUser, BookingWithItem } from "@shared/schema";
 import { calculateRentalDays, formatRussianDays, getRentalDateError } from "@shared/rental";
 
 const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
@@ -34,9 +34,17 @@ export default function ItemDetail() {
   });
 
   const { data: bookings } = useQuery<Booking[]>({
-    queryKey: ["/api/items", id, "bookings"],
+    queryKey: ["/api/items", id, "availability"],
     enabled: !!id,
   });
+
+  const { data: reviews } = useQuery<ReviewWithUser[]>({ queryKey: ["/api/items", id, "reviews"], enabled: !!id });
+  const { data: myBookings } = useQuery<BookingWithItem[]>({ queryKey: ["/api/bookings/my"], enabled: !!user });
+  const [reviewText, setReviewText] = useState("");
+  const [rating, setRating] = useState(5);
+
+  const favoriteMutation = useMutation({ mutationFn: async () => apiRequest(item?.isFavorite ? "DELETE" : "POST", `/api/favorites/${id}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/items", id] }); queryClient.invalidateQueries({ queryKey: ["/api/items"] }); queryClient.invalidateQueries({ queryKey: ["/api/favorites"] }); } });
+  const reviewMutation = useMutation({ mutationFn: async () => { const booking = myBookings?.find((b) => b.itemId === id && (b.paymentStatus === "paid" || ["completed", "Completed", "Paid"].includes(b.status))); if (!booking) throw new Error("Нет оплаченного или завершённого бронирования для отзыва"); return (await apiRequest("POST", `/api/items/${id}/reviews`, { bookingId: booking.id, rating, text: reviewText })).json(); }, onSuccess: () => { setReviewText(""); queryClient.invalidateQueries({ queryKey: ["/api/items", id, "reviews"] }); queryClient.invalidateQueries({ queryKey: ["/api/items", id] }); queryClient.invalidateQueries({ queryKey: ["/api/items"] }); toast({ title: "Отзыв добавлен" }); }, onError: (error: Error) => toast({ title: "Ошибка", description: error.message, variant: "destructive" }) });
 
   const createBookingMutation = useMutation({
     mutationFn: async (data: { itemId: string; startDate: string; endDate: string }) => {
@@ -44,7 +52,7 @@ export default function ItemDetail() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/items", id, "bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/items", id, "availability"] });
       setLocation(`/checkout/${data.id}`);
     },
     onError: (error: Error) => {
@@ -65,7 +73,7 @@ export default function ItemDetail() {
     if (!bookings) return false;
     
     return bookings
-      .filter((b) => b.status !== "Cancelled")
+      .filter((b) => !["cancelled", "Cancelled", "rejected", "completed", "Completed"].includes(b.status))
       .some((booking) => {
         const bookingStart = parseISO(booking.startDate);
         const bookingEnd = parseISO(booking.endDate);
@@ -177,6 +185,7 @@ export default function ItemDetail() {
             <div>
               <div className="flex gap-2 flex-wrap mb-3"><Badge variant="secondary" className="rounded-lg">{item.brand}</Badge><Badge>{itemStatusLabels[item.status] || item.status}</Badge></div>
               <h1 className="text-2xl md:text-3xl font-bold">{item.title}</h1>
+              <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><Star className="h-4 w-4 fill-primary text-primary" />{item.reviewsCount ? `${item.averageRating?.toFixed(1)} из 5 • ${item.reviewsCount} отзывов` : "Пока нет отзывов"}</div>
               <p className="text-muted-foreground mt-2">{item.category} • Размер {item.size}</p>
             </div>
 
@@ -197,6 +206,7 @@ export default function ItemDetail() {
             </div>
 
             <p className="text-muted-foreground">{item.description}</p>
+            <Button variant={item.isFavorite ? "default" : "outline"} className="rounded-xl" disabled={!user || favoriteMutation.isPending} onClick={() => favoriteMutation.mutate()}><Heart className={`mr-2 h-4 w-4 ${item.isFavorite ? "fill-current" : ""}`} />{item.isFavorite ? "В избранном" : "Добавить в избранное"}</Button>
 
             <Card className="rounded-2xl border-border/50">
               <CardContent className="p-5 space-y-4">
@@ -244,6 +254,7 @@ export default function ItemDetail() {
                 </div>
 
                 {hasDateError && <p className="text-sm text-destructive">{dateError}</p>}
+                {startDate && endDate && Array.from({length: calculateRentalDays(startDate,endDate)}, (_,i)=>{const d=new Date(startDate); d.setDate(d.getDate()+i); return d;}).some(disabledDays) && <p className="text-sm text-destructive">Товар уже занят на выбранные даты</p>}
                 {!canBookItem && <p className="text-sm text-destructive">Товар сейчас {itemStatusLabels[item.status]?.toLowerCase()} и недоступен для бронирования.</p>}
                 {days > 0 && (
                   <div className="space-y-2 pt-2 border-t">
@@ -282,6 +293,7 @@ export default function ItemDetail() {
             </Card>
           </div>
         </div>
+        <Card className="mt-8 rounded-2xl border-border/50"><CardContent className="p-6 space-y-5"><h2 className="text-xl font-semibold">Отзывы</h2>{!reviews?.length ? <p className="text-muted-foreground">Пока нет отзывов</p> : <div className="space-y-3">{reviews.map((review) => <div key={review.id} className="rounded-xl border p-4"><div className="flex justify-between gap-3"><p className="font-medium">{review.user.name}</p><span className="text-sm text-primary">{"★".repeat(review.rating)}{"☆".repeat(5-review.rating)}</span></div><p className="mt-2 text-sm text-muted-foreground">{review.text}</p><p className="mt-2 text-xs text-muted-foreground">{format(parseISO(review.createdAt), "d MMMM yyyy", { locale: ru })}</p></div>)}</div>}{user && myBookings?.some((b) => b.itemId === id && (b.paymentStatus === "paid" || ["completed", "Completed", "Paid"].includes(b.status))) && !reviews?.some((r) => r.userId === user.id) && <div className="rounded-xl border p-4 space-y-3"><h3 className="font-medium">Оставить отзыв</h3><select className="rounded-md border bg-background p-2" value={rating} onChange={(e)=>setRating(Number(e.target.value))}>{[5,4,3,2,1].map((n)=><option key={n} value={n}>{n} звезд</option>)}</select><textarea className="w-full min-h-24 rounded-md border bg-background p-3" value={reviewText} onChange={(e)=>setReviewText(e.target.value)} placeholder="Поделитесь впечатлениями"/><Button onClick={()=>reviewMutation.mutate()} disabled={reviewMutation.isPending || reviewText.length<3}>Отправить отзыв</Button></div>}</CardContent></Card>
       </div>
     </div>
   );

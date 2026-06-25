@@ -20,6 +20,8 @@ export function Header() {
 
   const navLinks = [
     { href: "/catalog", label: "Каталог" },
+    { href: "/how-to-rent", label: "Как арендовать" },
+    { href: "/rental-rules", label: "Правила проката" },
     { href: "/my-bookings", label: "Мои бронирования" },
   ];
 

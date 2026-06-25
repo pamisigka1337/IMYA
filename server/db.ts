@@ -78,6 +78,25 @@ export function initializeDatabase() {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS favorites (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      item_id TEXT NOT NULL REFERENCES items(id),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      item_id TEXT NOT NULL REFERENCES items(id),
+      booking_id TEXT NOT NULL REFERENCES bookings(id),
+      rating INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, item_id)
+    );
+
     CREATE TABLE IF NOT EXISTS pickup_points (
       id TEXT PRIMARY KEY NOT NULL,
       city TEXT NOT NULL,
@@ -118,5 +137,7 @@ export function initializeDatabase() {
     sqlite.exec("ALTER TABLE items ADD COLUMN status TEXT NOT NULL DEFAULT 'available'");
   }
 
+  sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS favorites_user_item_unique ON favorites(user_id, item_id)");
+  sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS reviews_user_item_unique ON reviews(user_id, item_id)");
   sqlite.exec("UPDATE items SET status = 'unavailable' WHERE is_active = 0 AND status = 'available'");
 }

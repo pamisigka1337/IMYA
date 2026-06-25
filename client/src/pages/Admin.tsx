@@ -20,11 +20,12 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2, BarChart3 } from "lucide-react";
-import type { Item, Booking, User } from "@shared/schema";
+import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2, BarChart3, Star } from "lucide-react";
+import type { Item, Booking, User, ReviewWithUser } from "@shared/schema";
 import { formatRussianDays } from "@shared/rental";
 
 type BookingWithItem = Booking & { item: Item; user: User };
+type AdminReview = ReviewWithUser & { item: Item };
 
 const itemFormSchema = z.object({
   brand: z.string().min(1, "Укажите бренд"),
@@ -81,6 +82,8 @@ export default function Admin() {
     queryKey: ["/api/admin/bookings"],
     enabled: !!user && user.role === "admin",
   });
+
+  const { data: reviews } = useQuery<AdminReview[]>({ queryKey: ["/api/admin/reviews"], enabled: !!user && user.role === "admin" });
 
   const { data: stats } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
@@ -236,6 +239,8 @@ export default function Admin() {
     },
   });
 
+  const deleteReviewMutation = useMutation({ mutationFn: async (id: string) => (await apiRequest("DELETE", `/api/admin/reviews/${id}`)).json(), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/reviews"] }); queryClient.invalidateQueries({ queryKey: ["/api/items"] }); toast({ title: "Отзыв удалён" }); } });
+
   const handleDeleteItem = (item: Item) => {
     if (!window.confirm("Вы точно хотите удалить товар?")) return;
     deleteItemMutation.mutate(item.id);
@@ -344,6 +349,7 @@ export default function Admin() {
               <Package className="h-4 w-4" />
               Все бронирования
             </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-2"><Star className="h-4 w-4" />Отзывы</TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Статистика
@@ -605,7 +611,7 @@ export default function Admin() {
                             {!item.isActive && <Badge variant="secondary">Неактивен</Badge>}<Badge variant="outline">{itemStatusLabels[item.status] || item.status}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {item.brand} • {item.category} • {item.size} • {item.pricePerDay.toLocaleString("ru-RU")} ₽/день
+                            {item.brand} • {item.category} • {item.size} • {item.pricePerDay.toLocaleString("ru-RU")} ₽/день • В избранном: {item.favoritesCount || 0}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -688,7 +694,7 @@ export default function Admin() {
                           <Badge variant="outline">{statusLabels[booking.status] || booking.status}</Badge>
                           <Button size="sm" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "confirmed" })} disabled={updateBookingStatusMutation.isPending || booking.status === "confirmed"}>Подтвердить</Button>
                           <Button size="sm" variant="outline" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "rejected" })} disabled={updateBookingStatusMutation.isPending || booking.status === "rejected"}>Отклонить</Button>
-                          <Button size="sm" variant="secondary" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "completed" })} disabled={updateBookingStatusMutation.isPending || booking.status === "completed"}>Завершить</Button>
+                          <Button size="sm" variant="secondary" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "completed" })} disabled={updateBookingStatusMutation.isPending || booking.status === "completed"}>Завершить</Button>{booking.paymentStatus === "paid" && <Link href={`/receipt/${booking.id}`}><Button size="sm" variant="outline">Открыть квитанцию</Button></Link>}
                         </div>
                       </div>
                     ))}
@@ -697,6 +703,8 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="reviews"><Card className="rounded-2xl border-border/50"><CardHeader><CardTitle>Отзывы</CardTitle></CardHeader><CardContent>{!reviews?.length ? <p className="text-muted-foreground text-center py-8">Пока нет отзывов</p> : <div className="space-y-3">{reviews.map((review)=><div key={review.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{review.item.title}</p><p className="text-sm text-muted-foreground">{review.user.name} • {"★".repeat(review.rating)}{"☆".repeat(5-review.rating)}</p><p className="mt-2 text-sm">{review.text}</p></div><Button variant="destructive" size="sm" onClick={()=>deleteReviewMutation.mutate(review.id)}>Удалить</Button></div></div>)}</div>}</CardContent></Card></TabsContent>
 
           <TabsContent value="stats">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
