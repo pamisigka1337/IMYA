@@ -43,6 +43,7 @@ export const items = sqliteTable("items", {
   condition: text("condition").notNull(),
   description: text("description").notNull(),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  status: text("status").notNull().default("available"),
 });
 
 export const insertItemSchema = createInsertSchema(items).omit({
@@ -61,7 +62,7 @@ export const bookings = sqliteTable("bookings", {
   days: integer("days").notNull(),
   totalPrice: integer("total_price").notNull(),
   deposit: integer("deposit").notNull(),
-  status: text("status").notNull().default("Pending"),
+  status: text("status").notNull().default("pending"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -95,7 +96,11 @@ export const insertPickupPointSchema = createInsertSchema(pickupPoints).omit({
 export type InsertPickupPoint = typeof pickupPoints.$inferInsert;
 export type PickupPoint = typeof pickupPoints.$inferSelect;
 
-export const BOOKING_STATUSES = ["Pending", "Paid", "Active", "Completed", "Cancelled"] as const;
+export const ITEM_STATUSES = ["available", "booked", "unavailable"] as const;
+export type ItemStatus = typeof ITEM_STATUSES[number];
+export const itemStatusSchema = z.enum(ITEM_STATUSES);
+
+export const BOOKING_STATUSES = ["pending", "confirmed", "rejected", "completed", "Cancelled", "Pending", "Paid", "Active", "Completed"] as const;
 export type BookingStatus = typeof BOOKING_STATUSES[number];
 
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
@@ -123,6 +128,7 @@ export const updateItemSchema = z.object({
   description: z.string().min(1).optional(),
   images: z.array(itemImageSchema).optional(),
   isActive: z.boolean().optional(),
+  status: z.enum(["available", "booked", "unavailable"]).optional(),
 });
 
 export const createItemSchema = z.object({
@@ -136,6 +142,7 @@ export const createItemSchema = z.object({
   description: z.string().min(1, "Добавьте описание"),
   images: z.array(itemImageSchema).default([]),
   isActive: z.boolean().default(true),
+  status: z.enum(["available", "booked", "unavailable"]).default("available"),
 });
 
 export type BookingWithItem = Booking & { item: Item };

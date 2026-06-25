@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2 } from "lucide-react";
+import { Plus, Pencil, Package, ShoppingBag, Shield, Trash2, BarChart3 } from "lucide-react";
 import type { Item, Booking, User } from "@shared/schema";
 
 type BookingWithItem = Booking & { item: Item; user: User };
@@ -36,6 +36,7 @@ const itemFormSchema = z.object({
   description: z.string().min(1, "Добавьте описание"),
   images: z.string().optional(),
   isActive: z.boolean().default(true),
+  status: z.enum(["available", "booked", "unavailable"]).default("available"),
 });
 
 type ItemFormData = z.infer<typeof itemFormSchema>;
@@ -56,13 +57,9 @@ function parseImageInput(value?: string) {
   return trimmed.split(separator).map((image) => image.trim()).filter(Boolean);
 }
 
-const statusLabels: Record<string, string> = {
-  Pending: "Ожидает оплаты",
-  Paid: "Оплачено",
-  Active: "Активно",
-  Completed: "Завершено",
-  Cancelled: "Отменено",
-};
+const statusLabels: Record<string, string> = { pending: "Ожидает подтверждения", confirmed: "Подтверждено", rejected: "Отклонено", completed: "Завершено", Pending: "Ожидает оплаты", Paid: "Оплачено", Active: "Активно", Completed: "Завершено", Cancelled: "Отменено" };
+const itemStatusLabels: Record<string, string> = { available: "Доступен", booked: "Забронирован", unavailable: "Недоступен" };
+type AdminStats = { totalItems: number; availableItems: number; bookedItems: number; unavailableItems: number; totalBookings: number; pendingBookings: number; confirmedBookings: number; completedBookings: number; estimatedRevenue: number };
 
 export default function Admin() {
   const { user, isLoading: authLoading } = useAuth();
@@ -81,6 +78,11 @@ export default function Admin() {
     enabled: !!user && user.role === "admin",
   });
 
+  const { data: stats } = useQuery<AdminStats>({
+    queryKey: ["/api/admin/stats"],
+    enabled: !!user && user.role === "admin",
+  });
+
   const form = useForm<ItemFormData>({
     resolver: zodResolver(itemFormSchema),
     defaultValues: {
@@ -94,6 +96,7 @@ export default function Admin() {
       description: "",
       images: "",
       isActive: true,
+      status: "available",
     },
   });
 
@@ -241,6 +244,9 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/items"] });
       toast({ title: "Статус обновлён" });
     },
     onError: (error: Error) => {
@@ -261,6 +267,7 @@ export default function Admin() {
       description: item.description,
       images: item.images.join("\n"),
       isActive: item.isActive,
+      status: itemFormSchema.shape.status.parse(item.status),
     });
     setSelectedFiles(null);
     setIsDialogOpen(true);
@@ -279,6 +286,7 @@ export default function Admin() {
       description: "",
       images: "",
       isActive: true,
+      status: "available",
     });
     setSelectedFiles(null);
     setIsDialogOpen(true);
@@ -330,7 +338,11 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="bookings" className="gap-2">
               <Package className="h-4 w-4" />
-              Бронирования
+              Все бронирования
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Статистика
             </TabsTrigger>
           </TabsList>
 
@@ -518,6 +530,20 @@ export default function Admin() {
                         </div>
                         <FormField
                           control={form.control}
+                          name="status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Статус товара</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger data-testid="select-item-status"><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>{Object.entries(itemStatusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
                           name="isActive"
                           render={({ field }) => (
                             <FormItem className="flex items-center justify-between rounded-xl border border-border/50 p-3">
@@ -572,7 +598,7 @@ export default function Admin() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium truncate">{item.title}</span>
-                            {!item.isActive && <Badge variant="secondary">Неактивен</Badge>}
+                            {!item.isActive && <Badge variant="secondary">Неактивен</Badge>}<Badge variant="outline">{itemStatusLabels[item.status] || item.status}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {item.brand} • {item.category} • {item.size} • {item.pricePerDay.toLocaleString("ru-RU")} ₽/день
@@ -644,28 +670,15 @@ export default function Admin() {
                               {booking.user?.name || "Пользователь"} • {format(parseISO(booking.startDate), "d MMM", { locale: ru })} - {format(parseISO(booking.endDate), "d MMM", { locale: ru })}
                             </p>
                             <p className="text-sm font-medium text-primary mt-1">
-                              {(booking.totalPrice + booking.deposit).toLocaleString("ru-RU")} ₽
+                              {booking.days} дн. • {booking.totalPrice.toLocaleString("ru-RU")} ₽
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Select
-                            value={booking.status}
-                            onValueChange={(status) =>
-                              updateBookingStatusMutation.mutate({ id: booking.id, status })
-                            }
-                          >
-                            <SelectTrigger className="w-[160px] rounded-xl" data-testid={`select-status-${booking.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(statusLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Badge variant="outline">{statusLabels[booking.status] || booking.status}</Badge>
+                          <Button size="sm" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "confirmed" })} disabled={updateBookingStatusMutation.isPending || booking.status === "confirmed"}>Подтвердить</Button>
+                          <Button size="sm" variant="outline" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "rejected" })} disabled={updateBookingStatusMutation.isPending || booking.status === "rejected"}>Отклонить</Button>
+                          <Button size="sm" variant="secondary" onClick={() => updateBookingStatusMutation.mutate({ id: booking.id, status: "completed" })} disabled={updateBookingStatusMutation.isPending || booking.status === "completed"}>Завершить</Button>
                         </div>
                       </div>
                     ))}
@@ -673,6 +686,24 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats && Object.entries({
+                "Всего товаров": stats.totalItems,
+                "Доступных товаров": stats.availableItems,
+                "Забронированных товаров": stats.bookedItems,
+                "Недоступных товаров": stats.unavailableItems,
+                "Всего бронирований": stats.totalBookings,
+                "В ожидании": stats.pendingBookings,
+                "Подтверждённых": stats.confirmedBookings,
+                "Завершённых": stats.completedBookings,
+                "Примерный доход": `${stats.estimatedRevenue.toLocaleString("ru-RU")} ₽`,
+              }).map(([label, value]) => (
+                <Card key={label} className="rounded-2xl border-border/50"><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="text-2xl font-bold mt-1">{value}</p></CardContent></Card>
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
       </div>

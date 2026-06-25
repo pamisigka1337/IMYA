@@ -110,7 +110,7 @@ export default function Catalog() {
     <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="category">Категория</Label>
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={(value) => setCategory(value === "all" ? "" : value)}>
           <SelectTrigger id="category" data-testid="select-category">
             <SelectValue placeholder="Все категории" />
           </SelectTrigger>
@@ -127,7 +127,7 @@ export default function Catalog() {
 
       <div className="space-y-2">
         <Label htmlFor="brand">Бренд</Label>
-        <Select value={brand} onValueChange={setBrand}>
+        <Select value={brand} onValueChange={(value) => setBrand(value === "all" ? "" : value)}>
           <SelectTrigger id="brand" data-testid="select-brand">
             <SelectValue placeholder="Все бренды" />
           </SelectTrigger>
@@ -144,7 +144,7 @@ export default function Catalog() {
 
       <div className="space-y-2">
         <Label htmlFor="size">Размер</Label>
-        <Select value={size} onValueChange={setSize}>
+        <Select value={size} onValueChange={(value) => setSize(value === "all" ? "" : value)}>
           <SelectTrigger id="size" data-testid="select-size">
             <SelectValue placeholder="Все размеры" />
           </SelectTrigger>

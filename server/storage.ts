@@ -1,4 +1,4 @@
-import { eq, and, or, ne, lte, gte, desc } from "drizzle-orm";
+import { eq, and, or, ne, lte, gte, desc, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -26,6 +26,7 @@ export interface IStorage {
   getItem(id: string): Promise<Item | undefined>;
   createItem(item: InsertItem): Promise<Item>;
   updateItem(id: string, data: Partial<InsertItem>): Promise<Item | undefined>;
+  updateItemStatus(id: string, status: string): Promise<Item | undefined>;
   deleteItem(id: string): Promise<Item | undefined>;
   
   // Bookings
@@ -35,7 +36,10 @@ export interface IStorage {
   getBookingsByItem(itemId: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: string, status: string): Promise<Booking | undefined>;
+  hasActiveConfirmedBooking(itemId: string): Promise<boolean>;
+  getAdminStats(): Promise<any>;
   checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean>;
+
 
   // Pickup Points
   getPickupPoints(): Promise<PickupPoint[]>;
@@ -76,6 +80,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateItem(id: string, data: Partial<InsertItem>): Promise<Item | undefined> {
     const [updated] = await db.update(items).set(data).where(eq(items.id, id)).returning();
+    return updated;
+  }
+
+  async updateItemStatus(id: string, status: string): Promise<Item | undefined> {
+    const [updated] = await db.update(items).set({ status }).where(eq(items.id, id)).returning();
     return updated;
   }
 
@@ -147,7 +156,7 @@ export class DatabaseStorage implements IStorage {
   async checkAvailability(itemId: string, startDate: string, endDate: string, excludeBookingId?: string): Promise<boolean> {
     const conditions = [
       eq(bookings.itemId, itemId),
-      ne(bookings.status, "Cancelled"),
+      or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed"), eq(bookings.status, "Paid"), eq(bookings.status, "Active"), eq(bookings.status, "Pending")),
       or(
         and(lte(bookings.startDate, startDate), gte(bookings.endDate, startDate)),
         and(lte(bookings.startDate, endDate), gte(bookings.endDate, endDate)),
@@ -165,6 +174,29 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions));
 
     return conflicts.length === 0;
+  }
+
+  async hasActiveConfirmedBooking(itemId: string): Promise<boolean> {
+    const active = await db.select().from(bookings).where(and(eq(bookings.itemId, itemId), eq(bookings.status, "confirmed"))).limit(1);
+    return active.length > 0;
+  }
+
+  async getAdminStats() {
+    const allItems = await db.select().from(items);
+    const allBookings = await db.select().from(bookings);
+    return {
+      totalItems: allItems.length,
+      availableItems: allItems.filter((item) => item.status === "available").length,
+      bookedItems: allItems.filter((item) => item.status === "booked").length,
+      unavailableItems: allItems.filter((item) => item.status === "unavailable").length,
+      totalBookings: allBookings.length,
+      pendingBookings: allBookings.filter((booking) => booking.status === "pending" || booking.status === "Pending").length,
+      confirmedBookings: allBookings.filter((booking) => booking.status === "confirmed" || booking.status === "Paid" || booking.status === "Active").length,
+      completedBookings: allBookings.filter((booking) => booking.status === "completed" || booking.status === "Completed").length,
+      estimatedRevenue: allBookings
+        .filter((booking) => ["confirmed", "completed", "Paid", "Active", "Completed"].includes(booking.status))
+        .reduce((sum, booking) => sum + booking.totalPrice, 0),
+    };
   }
 
   // Pickup Points
